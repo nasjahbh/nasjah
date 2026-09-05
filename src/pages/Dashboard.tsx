@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDateTime } from '../lib/dateUtils';
+import NasjahLogo from '../components/NasjahLogo';
 
 export default function Dashboard() {
   const [sales, setSales] = useState(0);
@@ -96,9 +97,12 @@ export default function Dashboard() {
     <div className="space-y-4 lg:space-y-6 pb-6">
       {/* Welcome Banner (Especially crisp on Mobile & Tablet) */}
       <div className="flex items-center justify-between bg-white px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl border border-emerald-900/10 shadow-xs">
-        <div>
-          <span className="text-[11px] text-emerald-800/60 font-medium">مرحباً بك في</span>
-          <h1 className="text-base sm:text-lg font-extrabold text-emerald-950 tracking-tight">أتيليه نَسْجَة للأقمشة</h1>
+        <div className="flex items-center gap-3">
+          <NasjahLogo variant="emblem" size="sm" />
+          <div>
+            <span className="text-[11px] text-emerald-800/60 font-medium">مرحباً بك في</span>
+            <h1 className="text-base sm:text-lg font-extrabold text-emerald-950 tracking-tight">أتيليه نَسْجَة للأقمشة</h1>
+          </div>
         </div>
         <div className="text-left">
           <span className="text-[10px] sm:text-xs bg-emerald-100/80 text-emerald-900 px-2.5 py-0.5 rounded-full font-bold">

@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@700&amp;family=Cinzel:wght@600&amp;family=Montserrat:wght@500;600&amp;display=swap');
+      .gold-stroke { stroke: #ebdcb9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .gold-hi { stroke: #f5ebd3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .bg-mask { stroke: #183628; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .txt-ar { font-family: 'Amiri', 'Traditional Arabic', serif; font-weight: 700; fill: #ebdcb9; }
+      .txt-en { font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.38em; fill: #ebdcb9; }
+    </style>
+    <filter id="knotShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#08140e" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  
+
+  <!-- Woven Knot Emblem -->
+  <g transform="translate(300, 250) rotate(-45)" filter="url(#knotShadow)">
+    
+    <!-- Base Ribbon 1 (Horizontal axis) -->
+    <!-- Loop 1: Left to Right -->
+    <!-- Under layer masks -->
+    <path d="M -130,0 C -130,-90 -60,-110 0,-30 C 60,50 130,90 130,0 C 130,-90 60,-50 0,30 C -60,110 -130,90 -130,0 Z" 
+          class="bg-mask" stroke-width="48" />
+
+    <!-- Ribbon 1 Strands -->
+    <!-- Outer Strand -->
+    <path d="M -145,0 C -145,-105 -70,-125 0,-40 C 70,45 145,105 145,0 C 145,-105 70,-45 0,40 C -70,125 -145,105 -145,0 Z" 
+          class="gold-stroke" stroke-width="5" />
+    <!-- Mid Strand -->
+    <path d="M -130,0 C -130,-90 -60,-110 0,-30 C 60,50 130,90 130,0 C 130,-90 60,-50 0,30 C -60,110 -130,90 -130,0 Z" 
+          class="gold-stroke" stroke-width="5" />
+    <!-- Inner Strand -->
+    <path d="M -115,0 C -115,-75 -50,-95 0,-20 C 50,55 115,75 115,0 C 115,-75 50,-55 0,20 C -50,95 -115,75 -115,0 Z" 
+          class="gold-stroke" stroke-width="5" />
+
+    <!-- Ribbon 2 (Vertical Axis: Rotated 90 deg) -->
+    <g transform="rotate(90)">
+      <!-- Under-crossing masks -->
+      <path d="M -130,0 C -130,-90 -60,-110 0,-30 C 60,50 130,90 130,0 C 130,-90 60,-50 0,30 C -60,110 -130,90 -130,0 Z" 
+            class="bg-mask" stroke-width="48" />
+
+      <!-- Strand 1 -->
+      <path d="M -145,0 C -145,-105 -70,-125 0,-40 C 70,45 145,105 145,0 C 145,-105 70,-45 0,40 C -70,125 -145,105 -145,0 Z" 
+            class="gold-stroke" stroke-width="5" />
+      <!-- Strand 2 -->
+      <path d="M -130,0 C -130,-90 -60,-110 0,-30 C 60,50 130,90 130,0 C 130,-90 60,-50 0,30 C -60,110 -130,90 -130,0 Z" 
+            class="gold-stroke" stroke-width="5" />
+      <!-- Strand 3 -->
+      <path d="M -115,0 C -115,-75 -50,-95 0,-20 C 50,55 115,75 115,0 C 115,-75 50,-55 0,20 C -50,95 -115,75 -115,0 Z" 
+            class="gold-stroke" stroke-width="5" />
+    </g>
+
+    <!-- OVERLAPS FOR AUTHENTIC WEAVE -->
+    <!-- Re-render specific crossing segments of Ribbon 1 over Ribbon 2 -->
+    <!-- Crossing at (0, -35) -->
+    <g>
+      <path d="M -25,-45 C -5,-35 15,-25 35,-15" class="bg-mask" stroke-width="48" />
+      <path d="M -25,-55 C -5,-45 15,-35 35,-25" class="gold-stroke" stroke-width="5" />
+      <path d="M -25,-45 C -5,-35 15,-25 35,-15" class="gold-stroke" stroke-width="5" />
+      <path d="M -25,-35 C -5,-25 15,-15 35,-5"  class="gold-stroke" stroke-width="5" />
+    </g>
+
+    <!-- Crossing at (0, 35) -->
+    <g>
+      <path d="M -35,15 C -15,25 5,35 25,45" class="bg-mask" stroke-width="48" />
+      <path d="M -35,5  C -15,15 5,25 25,35"  class="gold-stroke" stroke-width="5" />
+      <path d="M -35,15 C -15,25 5,35 25,45" class="gold-stroke" stroke-width="5" />
+      <path d="M -35,25 C -15,35 5,45 25,55" class="gold-stroke" stroke-width="5" />
+    </g>
+
+    <!-- Outer Overlaps for 4 corner lobes -->
+    <!-- Top-Right Lobe Overlap -->
+    <g transform="rotate(45)">
+      <path d="M 60,-40 C 90,-20 110,10 90,40" class="bg-mask" stroke-width="44" />
+      <path d="M 70,-45 C 105,-25 125,10 105,45" class="gold-stroke" stroke-width="5" />
+      <path d="M 60,-40 C 90,-20 110,10 90,40"   class="gold-stroke" stroke-width="5" />
+      <path d="M 50,-35 C 75,-15 95,10 75,35"    class="gold-stroke" stroke-width="5" />
+    </g>
+
+    <!-- Bottom-Left Lobe Overlap -->
+    <g transform="rotate(225)">
+      <path d="M 60,-40 C 90,-20 110,10 90,40" class="bg-mask" stroke-width="44" />
+      <path d="M 70,-45 C 105,-25 125,10 105,45" class="gold-stroke" stroke-width="5" />
+      <path d="M 60,-40 C 90,-20 110,10 90,40"   class="gold-stroke" stroke-width="5" />
+      <path d="M 50,-35 C 75,-15 95,10 75,35"    class="gold-stroke" stroke-width="5" />
+    </g>
+
+  </g>
+
+  
+  <!-- Typography Section -->
+  <g transform="translate(300, 485)">
+    <!-- Arabic Calligraphy: نَسْجَة -->
+    <text class="txt-ar" font-size="88" text-anchor="middle" y="0">نَسْجَة</text>
+    
+    <!-- English Subtitle: NASJAH -->
+    <text class="txt-en" font-size="24" text-anchor="middle" y="65">NASJAH</text>
+  </g>
+  
+</svg>

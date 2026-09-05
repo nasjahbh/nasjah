@@ -8,6 +8,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import NasjahLogo from './NasjahLogo';
 
 export default function Layout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -101,11 +102,7 @@ export default function Layout() {
         <div>
           {/* Atelier Brand Header */}
           <div className="flex items-center gap-3 pb-5 border-b border-emerald-900/60 mb-6">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-amber-400 p-0.5 shadow-md flex items-center justify-center flex-shrink-0">
-              <div className="w-full h-full bg-emerald-950 rounded-[14px] flex items-center justify-center text-amber-300 font-black text-lg">
-                ن
-              </div>
-            </div>
+            <NasjahLogo variant="emblem" size="md" className="flex-shrink-0" />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-base tracking-wider uppercase text-emerald-100">NASJAH</span>
@@ -224,11 +221,7 @@ export default function Layout() {
       {/* ========================================================================= */}
       <header className="hidden md:flex lg:hidden h-16 bg-emerald-950 text-emerald-50 px-5 items-center justify-between border-b border-emerald-900/50 shadow-md flex-shrink-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-amber-400 p-0.5 flex items-center justify-center">
-            <div className="w-full h-full bg-emerald-950 rounded-[10px] flex items-center justify-center text-amber-300 font-bold text-sm">
-              ن
-            </div>
-          </div>
+          <NasjahLogo variant="emblem" size="sm" />
           <span className="font-extrabold text-sm tracking-wider uppercase text-emerald-100">NASJAH</span>
         </div>
 
@@ -284,11 +277,7 @@ export default function Layout() {
       {/* ========================================================================= */}
       <header className="flex md:hidden h-14 bg-emerald-950 text-emerald-50 px-4 items-center justify-between flex-shrink-0 z-30 shadow-md border-b border-emerald-900/40">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-amber-400 p-0.5 shadow-sm flex items-center justify-center">
-            <div className="w-full h-full bg-emerald-950 rounded-[10px] flex items-center justify-center text-amber-300 font-bold text-sm">
-              ن
-            </div>
-          </div>
+          <NasjahLogo variant="emblem" size="sm" />
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-sm tracking-wider uppercase text-emerald-100">NASJAH</span>
@@ -441,10 +430,8 @@ export default function Layout() {
               <div>
                 {/* Header in Drawer */}
                 <div className="flex justify-between items-center pb-4 border-b border-emerald-900/60 mb-5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-amber-400 text-emerald-950 font-black flex items-center justify-center text-sm">
-                      ن
-                    </div>
+                  <div className="flex items-center gap-2.5">
+                    <NasjahLogo variant="emblem" size="sm" />
                     <div>
                       <h3 className="font-bold text-sm text-emerald-100">نَسْجَة • NASJAH</h3>
                       <p className="text-[10px] text-emerald-400">إدارة الأتيليه والمبيعات</p>

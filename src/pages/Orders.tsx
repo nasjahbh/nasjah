@@ -9,6 +9,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { Fabric, Order, OrderStatus, PaymentMethod } from '../types';
 import { formatDateTime, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
+import NasjahLogo from '../components/NasjahLogo';
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -667,10 +668,8 @@ export default function Orders() {
               className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl z-10 overflow-hidden flex flex-col p-5 border border-emerald-900/20"
             >
               <div className="flex justify-between items-center pb-3 border-b border-emerald-900/10">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-6 h-6 rounded-lg bg-emerald-900 text-amber-300 font-bold flex items-center justify-center text-xs">
-                    ن
-                  </div>
+                <div className="flex items-center gap-2">
+                  <NasjahLogo variant="emblem" size="xs" />
                   <span className="font-extrabold text-xs text-emerald-950 tracking-wider uppercase">
                     فاتورة نَسْجَة
                   </span>

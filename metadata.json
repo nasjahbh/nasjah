@@ -1,6 +1,6 @@
 {
-  "name": "Nasjah Dashboard",
-  "description": "Private management dashboard for Nasjah fabric business with real-time inventory and AI insights.",
+  "name": "نَسْجَة • NASJAH",
+  "description": "أتيليه نَسْجَة للأقمشة الراقية - لوحة الإدارة المتكاملة للطلبات والمخزون والميزانية",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

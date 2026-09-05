@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Lock, Mail, ArrowRight, Sparkles } from 'lucide-react';
+import NasjahLogo from '../components/NasjahLogo';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -44,10 +45,8 @@ export default function Login() {
         className="bg-white p-6 sm:p-8 rounded-[36px] shadow-2xl max-w-sm w-full text-center space-y-6 border border-emerald-900/15"
       >
         <div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-950 text-amber-300 font-extrabold flex items-center justify-center mx-auto mb-3 text-lg shadow-md">
-            ن
-          </div>
-          <h1 className="text-xl font-black text-emerald-950 tracking-wider uppercase">NASJAH</h1>
+          <NasjahLogo variant="emblem" size="lg" className="mx-auto mb-3" />
+          <h1 className="text-xl font-black text-emerald-950 tracking-wider uppercase">نَسْجَة • NASJAH</h1>
           <p className="text-xs text-emerald-800/70 mt-0.5">لوحة إدارة الأتيليه والمبيعات</p>
         </div>
 
