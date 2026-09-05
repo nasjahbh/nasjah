@@ -95,25 +95,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 lg:space-y-6 pb-6">
-      {/* Welcome Banner (Especially crisp on Mobile & Tablet) */}
-      <div className="flex items-center justify-between bg-white px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl border border-emerald-900/10 shadow-xs">
-        <div className="flex items-center gap-3">
-          <NasjahLogo variant="emblem" size="sm" />
-          <div>
-            <span className="text-[11px] text-emerald-800/60 font-medium">مرحباً بك في</span>
-            <h1 className="text-base sm:text-lg font-extrabold text-emerald-950 tracking-tight">دار نَسْجَة للأقمشة الراقية</h1>
-          </div>
-        </div>
-        <div className="text-left">
-          <span className="text-[10px] sm:text-xs bg-emerald-100/80 text-emerald-900 px-2.5 py-0.5 rounded-full font-bold">
-            اليوم
-          </span>
-          <p className="text-[11px] font-mono text-emerald-800/70 mt-0.5">
-            {new Date().toLocaleDateString('ar-BH', { month: 'short', day: 'numeric' })}
-          </p>
-        </div>
-      </div>
-
       {/* Top Financial & Action Row (1 col on mobile, 3 cols on desktop) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 lg:gap-5">
         
