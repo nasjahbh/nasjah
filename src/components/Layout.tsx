@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import NasjahLogo from './NasjahLogo';
+import { PWAInstallButton } from './PWAInstallButton';
 
 export default function Layout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -255,6 +256,7 @@ export default function Layout() {
 
         {/* Tablet Quick Action & Logout */}
         <div className="flex items-center gap-2">
+          <PWAInstallButton />
           <Link
             to="/orders"
             className="bg-amber-400 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-amber-300 transition flex items-center gap-1 shadow-xs"
@@ -291,8 +293,9 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Mobile Hamburger Drawer Trigger */}
-        <div className="flex items-center gap-1.5">
+        {/* Mobile Hamburger Drawer Trigger & PWA */}
+        <div className="flex items-center gap-2">
+          <PWAInstallButton />
           <button
             onClick={() => setIsMenuOpen(true)}
             className="w-9 h-9 flex items-center justify-center rounded-xl bg-emerald-900/80 hover:bg-emerald-800 text-emerald-200 transition border border-emerald-800/40 active:scale-95"
@@ -317,7 +320,9 @@ export default function Layout() {
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <PWAInstallButton />
+
             <div className="flex items-center gap-2 text-xs text-emerald-800/70 bg-emerald-50 px-3.5 py-1.5 rounded-xl border border-emerald-900/10">
               <Calendar className="w-4 h-4 text-emerald-700" />
               <span className="font-medium">{todayFormatted}</span>
@@ -502,6 +507,10 @@ export default function Layout() {
 
               {/* Drawer Footer */}
               <div className="pt-4 border-t border-emerald-900/60 space-y-2">
+                <div className="px-1">
+                  <PWAInstallButton className="w-full justify-center py-2.5" />
+                </div>
+
                 <a
                   href="https://instagram.com/nasjah.bh"
                   target="_blank"

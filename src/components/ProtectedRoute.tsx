@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { isEmailAuthorized } from '../lib/security';
 
 export default function ProtectedRoute() {
   const [loading, setLoading] = useState(true);
@@ -12,13 +13,37 @@ export default function ProtectedRoute() {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setAuthenticated(!!session);
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const userEmail = session.user.email || '';
+        if (userEmail && !isEmailAuthorized(userEmail)) {
+          // Reject and sign out unauthorized user
+          await supabase.auth.signOut();
+          setAuthenticated(false);
+        } else {
+          setAuthenticated(true);
+        }
+      } else {
+        setAuthenticated(false);
+      }
       setLoading(false);
-    });
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthenticated(!!session);
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        const userEmail = session.user.email || '';
+        if (userEmail && !isEmailAuthorized(userEmail)) {
+          await supabase.auth.signOut();
+          setAuthenticated(false);
+        } else {
+          setAuthenticated(true);
+        }
+      } else {
+        setAuthenticated(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -30,8 +55,8 @@ export default function ProtectedRoute() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-amber-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-900"></div>
+      <div className="min-h-screen flex items-center justify-center bg-emerald-950">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-300"></div>
       </div>
     );
   }
