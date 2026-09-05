@@ -3,7 +3,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, ShoppingBag, Layers, Receipt, TrendingUp, 
   Menu, X, LogOut, Plus, ChevronLeft, Calendar,
-  Instagram, PlusCircle, ArrowUpRight
+  Instagram, PlusCircle, ArrowUpRight, User, ShieldCheck
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
@@ -16,8 +16,19 @@ export default function Layout() {
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [totalSales, setTotalSales] = useState(0);
+  const [userEmail, setUserEmail] = useState<string>('');
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.email) {
+          setUserEmail(session.user.email);
+        }
+      });
+    }
+  }, []);
 
   // Load badge and summary data
   const updateBadges = () => {
@@ -209,10 +220,16 @@ export default function Layout() {
 
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-2 w-full px-3 py-2 text-red-300 hover:bg-red-950/50 hover:text-red-200 rounded-xl transition text-xs font-semibold"
+            className="flex items-center justify-between w-full px-3 py-2.5 text-red-300 hover:text-white bg-red-950/40 hover:bg-red-900/60 rounded-xl transition text-xs font-bold border border-red-900/50 active:scale-95"
+            title="تسجيل الخروج والعودة لشاشة تسجيل الدخول"
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>تسجيل الخروج</span>
+            <div className="flex items-center gap-2">
+              <LogOut className="w-3.5 h-3.5 text-red-400" />
+              <span>تسجيل الخروج</span>
+            </div>
+            <span className="text-[10px] bg-red-900/80 px-2 py-0.5 rounded-md text-red-200">
+              صفحة الدخول
+            </span>
           </button>
         </div>
       </aside>
@@ -339,11 +356,35 @@ export default function Layout() {
 
             <Link
               to="/orders"
-              className="bg-emerald-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-800 transition flex items-center gap-1.5 shadow-xs"
+              className="bg-emerald-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-800 transition flex items-center gap-1.5 shadow-xs active:scale-95"
             >
               <Plus className="w-4 h-4" />
               <span>طلب جديد</span>
             </Link>
+
+            {/* زر الحساب وتسجيل الخروج في الشريط العلوي */}
+            <div className="flex items-center gap-2 pr-2 border-r border-emerald-900/10 mr-1">
+              <div 
+                className="hidden xl:flex items-center gap-1.5 bg-emerald-50/80 px-2.5 py-1.5 rounded-xl border border-emerald-900/10 text-xs"
+                title="الحساب الحالي المعتمد"
+              >
+                <div className="w-4 h-4 rounded-full bg-emerald-900 text-amber-300 flex items-center justify-center">
+                  <User className="w-2.5 h-2.5" />
+                </div>
+                <span className="font-semibold text-[11px] text-emerald-950 font-mono" dir="ltr">
+                  {userEmail || 'nasjahbh@gmail.com'}
+                </span>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-800 px-3 py-2 rounded-xl text-xs font-bold transition border border-red-200 active:scale-95"
+                title="تسجيل الخروج والعودة لواجهة تسجيل الدخول"
+              >
+                <LogOut className="w-3.5 h-3.5 text-red-600" />
+                <span>تسجيل الخروج</span>
+              </button>
+            </div>
           </div>
         </div>
 

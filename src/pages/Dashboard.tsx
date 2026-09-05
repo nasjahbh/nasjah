@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   TrendingUp, TrendingDown, DollarSign, Activity, ShoppingBag, 
   Layers, PlusCircle, ArrowLeft, AlertCircle, Clock, CheckCircle2, 
-  MessageSquare, Sparkles, Receipt, ChevronLeft, ArrowUpRight
+  Sparkles, Receipt, ChevronLeft, ArrowUpRight, Check
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDateTime } from '../lib/dateUtils';
 import NasjahLogo from '../components/NasjahLogo';
+import WhatsAppIcon from '../components/WhatsAppIcon';
 
 export default function Dashboard() {
   const [sales, setSales] = useState(0);
@@ -77,7 +78,25 @@ export default function Dashboard() {
   const lowStockFabrics = fabrics.filter(f => (Number(f.quantity) || 0) <= 2);
   const totalMeters = fabrics.reduce((acc, f) => acc + (Number(f.quantity) || 0), 0);
   const netProfit = sales - expenses;
-  const pendingOrders = orders.filter(o => o.status === 'قيد التجهيز' || !o.status);
+  const pendingOrders = orders.filter(o => o.status !== 'تم التسليم');
+  const deliveredOrders = orders.filter(o => o.status === 'تم التسليم');
+
+  const handleDeliverOrder = (orderId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const updated = orders.map((o) => {
+      if (o.id === orderId) {
+        return { ...o, status: 'تم التسليم' };
+      }
+      return o;
+    });
+    setOrders(updated);
+    localStorage.setItem('ordersData', JSON.stringify(updated));
+    localStorage.removeItem('insights_timestamp');
+    window.dispatchEvent(new Event('storage'));
+  };
 
   if (isInitializing) {
     return (
@@ -303,59 +322,86 @@ export default function Dashboard() {
                   + أضف أول طلب
                 </Link>
               </div>
+            ) : pendingOrders.length === 0 ? (
+              <div className="py-8 text-center bg-emerald-50/50 rounded-2xl border border-dashed border-emerald-900/10 p-4">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+                </div>
+                <p className="text-xs font-bold text-emerald-950">تم تسليم جميع الطلبات للزبائن بنجاح!</p>
+                <p className="text-[11px] text-emerald-800/60 mt-0.5">كافة طلبات التفصيل مكتملة ومسلّمة</p>
+                <Link to="/orders" className="text-emerald-900 text-xs font-bold mt-2.5 inline-block underline">
+                  الانتقال لجدول الطلبات الكامل ({orders.length})
+                </Link>
+              </div>
             ) : (
               <div className="space-y-2.5">
-                {orders.slice(0, 5).map((o) => {
-                  const { full } = formatDateTime(o.createdAt);
-                  const cleanPhone = o.phone?.replace(/[^0-9]/g, '');
+                <AnimatePresence initial={false}>
+                  {pendingOrders.slice(0, 5).map((o) => {
+                    const { full } = formatDateTime(o.createdAt);
+                    const cleanPhone = o.phone?.replace(/[^0-9]/g, '');
 
-                  return (
-                    <div 
-                      key={o.id} 
-                      className="p-3 bg-emerald-50/50 rounded-2xl border border-emerald-900/5 flex items-center justify-between hover:bg-emerald-50 transition"
-                    >
-                      <div className="flex-1 min-w-0 pr-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-xs sm:text-sm text-emerald-950 truncate">
-                            {o.customerName}
-                          </span>
-                          <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${
-                            o.status === 'تم التسليم' 
-                              ? 'bg-emerald-100 text-emerald-800' 
-                              : 'bg-amber-100 text-amber-800'
-                          }`}>
-                            {o.status || 'قيد التجهيز'}
-                          </span>
+                    return (
+                      <motion.div 
+                        key={o.id} 
+                        layout
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: 20, transition: { duration: 0.2 } }}
+                        className="p-3 bg-emerald-50/50 rounded-2xl border border-emerald-900/5 flex items-center justify-between hover:bg-emerald-50 transition"
+                      >
+                        <div className="flex-1 min-w-0 pr-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-xs sm:text-sm text-emerald-950 truncate">
+                              {o.customerName}
+                            </span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded font-semibold bg-amber-100 text-amber-800">
+                              {o.status || 'قيد التجهيز'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-emerald-800/70 truncate mt-0.5">
+                            {o.details}
+                          </p>
+                          <p className="text-[9px] text-emerald-800/50 font-mono mt-0.5">
+                            {full}
+                          </p>
                         </div>
-                        <p className="text-[11px] text-emerald-800/70 truncate mt-0.5">
-                          {o.details}
-                        </p>
-                        <p className="text-[9px] text-emerald-800/50 font-mono mt-0.5">
-                          {full}
-                        </p>
-                      </div>
 
-                      <div className="text-left flex-shrink-0 flex items-center gap-2">
-                        <div>
-                          <span className="font-bold text-xs sm:text-sm text-emerald-950 font-mono block">
-                            {Number(o.price || o.total).toFixed(2)} د.ب
-                          </span>
-                        </div>
-                        {cleanPhone && (
-                          <a
-                            href={`https://wa.me/${cleanPhone}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            title="واتساب"
-                            className="w-7 h-7 bg-emerald-100 text-emerald-800 rounded-lg flex items-center justify-center hover:bg-emerald-200 transition"
+                        <div className="text-left flex-shrink-0 flex items-center gap-1.5 sm:gap-2">
+                          <div>
+                            <span className="font-bold text-xs sm:text-sm text-emerald-950 font-mono block ml-1">
+                              {Number(o.price || o.total).toFixed(2)} د.ب
+                            </span>
+                          </div>
+
+                          {/* زر صح: يوحي بأنه تم تسليم الطلب إلى الزبون ليختفي من الصفحة الرئيسية */}
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeliverOrder(o.id, e)}
+                            title="تم تسليم الطلب إلى الزبون (إخفاء من الرئيسية)"
+                            aria-label="تم تسليم الطلب إلى الزبون"
+                            className="w-7 h-7 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-lg flex items-center justify-center transition shadow-xs active:scale-90"
                           >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                            <Check className="w-4 h-4 stroke-[2.5]" />
+                          </button>
+
+                          {/* زر الواتساب مع علامة الواتساب الرسمية */}
+                          {cleanPhone && (
+                            <a
+                              href={`https://wa.me/${cleanPhone}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="مراسلة الزبون عبر واتساب"
+                              aria-label="مراسلة الزبون عبر واتساب"
+                              className="w-7 h-7 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg flex items-center justify-center transition shadow-xs active:scale-90"
+                            >
+                              <WhatsAppIcon className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
             )}
           </div>

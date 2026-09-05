@@ -10,6 +10,7 @@ import 'jspdf-autotable';
 import { Fabric, Order, OrderStatus, PaymentMethod } from '../types';
 import { formatDateTime, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
 import NasjahLogo from '../components/NasjahLogo';
+import WhatsAppIcon from '../components/WhatsAppIcon';
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -409,10 +410,10 @@ export default function Orders() {
                           href={`https://wa.me/${cleanPhone}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="w-6 h-6 bg-emerald-100 text-emerald-800 rounded-lg flex items-center justify-center hover:bg-emerald-200 transition"
-                          title="مراسلة واتساب"
+                          className="w-6 h-6 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg flex items-center justify-center transition shadow-xs active:scale-90"
+                          title="مراسلة الزبون عبر واتساب"
                         >
-                          <MessageSquare className="w-3 h-3" />
+                          <WhatsAppIcon className="w-3.5 h-3.5" />
                         </a>
                       </div>
                     )}
