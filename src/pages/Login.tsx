@@ -46,8 +46,8 @@ export default function Login() {
       >
         <div>
           <NasjahLogo variant="emblem" size="lg" className="mx-auto mb-3" />
-          <h1 className="text-xl font-black text-emerald-950 tracking-wider uppercase">نَسْجَة • NASJAH</h1>
-          <p className="text-xs text-emerald-800/70 mt-0.5">لوحة إدارة الأتيليه والمبيعات</p>
+          <h1 className="text-xl font-black text-emerald-950 tracking-wider">دار نَسْجَة للأقمشة</h1>
+          <p className="text-xs text-emerald-800/70 mt-0.5">لوحة إدارة المبيعات وتفصيل الأقمشة</p>
         </div>
 
         {error && (

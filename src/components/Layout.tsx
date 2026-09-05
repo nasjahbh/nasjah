@@ -105,13 +105,13 @@ export default function Layout() {
             <NasjahLogo variant="emblem" size="md" className="flex-shrink-0" />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base tracking-wider uppercase text-emerald-100">NASJAH</span>
-                <span className="text-[10px] bg-emerald-800 text-amber-300 px-1.5 py-0.2 rounded font-mono font-bold">
-                  PRO
+                <span className="font-extrabold text-base tracking-wider text-emerald-100">نَسْجَة</span>
+                <span className="text-[10px] bg-emerald-800 text-amber-300 px-1.5 py-0.2 rounded font-bold">
+                  احترافي
                 </span>
               </div>
               <p className="text-[11px] text-emerald-400 font-medium truncate">
-                أتيليه وتفصيل الأقمشة
+                دار تفصيل وخياطة الأقمشة
               </p>
             </div>
           </div>
@@ -222,7 +222,7 @@ export default function Layout() {
       <header className="hidden md:flex lg:hidden h-16 bg-emerald-950 text-emerald-50 px-5 items-center justify-between border-b border-emerald-900/50 shadow-md flex-shrink-0 z-30">
         <div className="flex items-center gap-3">
           <NasjahLogo variant="emblem" size="sm" />
-          <span className="font-extrabold text-sm tracking-wider uppercase text-emerald-100">NASJAH</span>
+          <span className="font-extrabold text-sm tracking-wider text-emerald-100">نَسْجَة</span>
         </div>
 
         {/* Tablet Horizontal Nav Tabs */}
@@ -280,9 +280,9 @@ export default function Layout() {
           <NasjahLogo variant="emblem" size="sm" />
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-sm tracking-wider uppercase text-emerald-100">NASJAH</span>
-              <span className="text-[10px] bg-emerald-800/80 text-amber-300 px-1.5 py-0.2 rounded font-mono">
-                PRO
+              <span className="font-extrabold text-sm tracking-wider text-emerald-100">نَسْجَة</span>
+              <span className="text-[10px] bg-emerald-800/80 text-amber-300 px-1.5 py-0.2 rounded font-bold">
+                احترافي
               </span>
             </div>
             <p className="text-[10px] text-emerald-400/80 font-medium">
@@ -313,7 +313,7 @@ export default function Layout() {
           <div>
             <h1 className="text-base font-extrabold text-emerald-950">{getPageTitle()}</h1>
             <p className="text-[11px] text-emerald-800/60 font-medium">
-              لوحة التحكم والإدارة الذكية لأتيليه نَسْجَة
+              لوحة التحكم والإدارة الذكية لدار نَسْجَة للأقمشة
             </p>
           </div>
 
@@ -433,8 +433,8 @@ export default function Layout() {
                   <div className="flex items-center gap-2.5">
                     <NasjahLogo variant="emblem" size="sm" />
                     <div>
-                      <h3 className="font-bold text-sm text-emerald-100">نَسْجَة • NASJAH</h3>
-                      <p className="text-[10px] text-emerald-400">إدارة الأتيليه والمبيعات</p>
+                      <h3 className="font-bold text-sm text-emerald-100">دار نَسْجَة للأقمشة</h3>
+                      <p className="text-[10px] text-emerald-400">إدارة المتجر والمبيعات</p>
                     </div>
                   </div>
                   <button 

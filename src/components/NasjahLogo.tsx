@@ -55,14 +55,14 @@ export default function NasjahLogo({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-sm tracking-wider uppercase text-emerald-100 font-sans">
-                NASJAH
+                نَسْجَة
               </span>
-              <span className="text-[10px] bg-emerald-800/90 text-amber-300 px-1.5 py-0.2 rounded font-mono font-bold">
-                PRO
+              <span className="text-[10px] bg-emerald-800/90 text-amber-300 px-1.5 py-0.2 rounded font-bold">
+                احترافي
               </span>
             </div>
             <p className="text-[10px] text-emerald-400 font-medium truncate">
-              أتيليه وتفصيل الأقمشة
+              دار خياطة وتفصيل الأقمشة
             </p>
           </div>
         )}

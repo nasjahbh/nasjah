@@ -374,7 +374,7 @@ export default function Expenses() {
                   <input
                     type="text"
                     required
-                    placeholder="مثال: شراء لفافات أقمشة قطن، فاتورة كهرباء الأتيليه..."
+                    placeholder="مثال: شراء لفافات أقمشة قطن، فاتورة كهرباء المتجر..."
                     value={expenseForm.description}
                     onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
                     className="w-full p-2.5 rounded-xl border border-emerald-900/15 focus:ring-1 focus:ring-red-700 outline-none text-xs"

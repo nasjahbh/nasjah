@@ -101,7 +101,7 @@ export default function Dashboard() {
           <NasjahLogo variant="emblem" size="sm" />
           <div>
             <span className="text-[11px] text-emerald-800/60 font-medium">مرحباً بك في</span>
-            <h1 className="text-base sm:text-lg font-extrabold text-emerald-950 tracking-tight">أتيليه نَسْجَة للأقمشة</h1>
+            <h1 className="text-base sm:text-lg font-extrabold text-emerald-950 tracking-tight">دار نَسْجَة للأقمشة الراقية</h1>
           </div>
         </div>
         <div className="text-left">

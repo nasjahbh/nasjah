@@ -161,43 +161,43 @@ export default function Orders() {
     const doc = new jsPDF();
     const { dateStr, timeStr } = formatDateTime(order.createdAt);
     
-    doc.setFontSize(22);
+    doc.setFontSize(20);
     doc.setTextColor(6, 78, 59);
-    doc.text("NASJAH INVOICE", 105, 20, { align: "center" });
+    doc.text("فاتورة مبيعات - دار نَسْجَة للأقمشة", 105, 20, { align: "center" });
     
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Date & Time: ${dateStr} - ${timeStr}`, 20, 35);
-    doc.text(`Invoice ID: #${order.id}`, 20, 42);
+    doc.text(`التاريخ: ${dateStr} - ${timeStr}`, 20, 35);
+    doc.text(`رقم الفاتورة: #${order.id}`, 20, 42);
     
     doc.setFontSize(12);
     doc.setTextColor(20);
-    doc.text(`Customer: ${order.customerName}`, 20, 55);
-    doc.text(`Phone: ${order.phone}`, 20, 62);
-    doc.text(`Status: ${order.status || 'قيد التجهيز'}`, 20, 69);
-    doc.text(`Payment Method: ${order.paymentMethod || 'بنفت بي'}`, 20, 76);
+    doc.text(`العميل: ${order.customerName}`, 20, 55);
+    doc.text(`الهاتف: ${order.phone || '-'}`, 20, 62);
+    doc.text(`الحالة: ${order.status || 'قيد التجهيز'}`, 20, 69);
+    doc.text(`طريقة الدفع: ${order.paymentMethod || 'بنفت بي'}`, 20, 76);
     
     (doc as any).autoTable({
       startY: 84,
       headStyles: { fillColor: [6, 78, 59] },
-      head: [['Description / Fabric', 'Price (BHD)']],
+      head: [['بيان القماش / تفاصيل الطلب', 'المبلغ (د.ب)']],
       body: [
-        [order.details, `${order.price.toFixed(2)} BHD`]
+        [order.details, `${order.price.toFixed(2)} د.ب`]
       ],
     });
     
     const finalY = (doc as any).lastAutoTable?.finalY || 110;
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setTextColor(6, 78, 59);
-    doc.text(`Total Amount: ${order.price.toFixed(2)} BHD`, 190, finalY + 15, { align: 'right' });
+    doc.text(`المجموع المطلوب: ${order.price.toFixed(2)} د.ب`, 190, finalY + 15, { align: 'right' });
 
     if (order.notes) {
       doc.setFontSize(10);
       doc.setTextColor(120);
-      doc.text(`Notes: ${order.notes}`, 20, finalY + 25);
+      doc.text(`ملاحظات: ${order.notes}`, 20, finalY + 25);
     }
 
-    doc.save(`Invoice_${order.customerName}_${order.id}.pdf`);
+    doc.save(`فاتورة_${order.customerName}_${order.id}.pdf`);
   };
 
   // Filter logic

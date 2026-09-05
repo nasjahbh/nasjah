@@ -48,7 +48,7 @@ export default function Budget() {
         <div>
           <h1 className="text-base sm:text-lg font-extrabold text-emerald-950">الميزانية والأرباح</h1>
           <p className="text-[11px] text-emerald-800/60 font-medium">
-            التحليل المالي لصافي الأرباح وهوامش العائد لأتيليه نَسْجَة
+            التحليل المالي لصافي الأرباح وهوامش العائد لدار نَسْجَة للأقمشة
           </p>
         </div>
         <div className="flex items-center gap-2">
