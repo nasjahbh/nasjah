@@ -26,13 +26,13 @@ export default function NasjahLogo({
   if (variant === 'icon' || variant === 'emblem') {
     return (
       <div 
-        className={`relative overflow-hidden rounded-2xl bg-[#183628] flex items-center justify-center shadow-xs border border-emerald-800/40 select-none ${sizeMap[size]} ${className}`}
+        className={`relative overflow-hidden rounded-2xl flex items-center justify-center shadow-xs border border-emerald-800/40 select-none ${sizeMap[size]} ${className}`}
         title="شعار نَسْجَة"
       >
         <img 
-          src="/favicon.svg" 
+          src="/nasjah-logo.jpeg" 
           alt="شعار نَسْجَة" 
-          className="w-full h-full object-contain p-0.5" 
+          className="w-full h-full object-cover" 
           referrerPolicy="no-referrer"
         />
       </div>
@@ -43,11 +43,11 @@ export default function NasjahLogo({
   if (variant === 'mark') {
     return (
       <div className={`flex items-center gap-2.5 select-none ${className}`}>
-        <div className="w-9 h-9 rounded-xl bg-[#183628] p-1 flex items-center justify-center border border-emerald-800/50 shadow-xs flex-shrink-0">
+        <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center border border-emerald-800/50 shadow-xs flex-shrink-0">
           <img 
-            src="/favicon.svg" 
+            src="/nasjah-logo.jpeg" 
             alt="أيقونة نَسْجَة" 
-            className="w-full h-full object-contain" 
+            className="w-full h-full object-cover" 
             referrerPolicy="no-referrer"
           />
         </div>
@@ -74,9 +74,9 @@ export default function NasjahLogo({
   return (
     <div className={`relative flex flex-col items-center justify-center select-none ${className}`}>
       <img 
-        src="/logo.svg" 
-        alt="شعار نَسْجَة - NASJAH" 
-        className="w-full h-auto max-w-[280px] rounded-3xl shadow-lg border border-emerald-800/30"
+        src="/nasjah-logo.jpeg" 
+        alt="شعار نَسْجَة" 
+        className="w-full h-auto max-w-[280px] rounded-3xl shadow-lg border border-emerald-800/30 object-contain"
         referrerPolicy="no-referrer"
       />
     </div>
