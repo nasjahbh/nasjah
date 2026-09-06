@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingUp, TrendingDown, DollarSign, Percent, ArrowLeft, RotateCcw, AlertTriangle, FileSpreadsheet, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getLocalData, resetDatabase, syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
 
 export default function Budget() {
   const [revenues, setRevenues] = useState(0);
@@ -11,29 +12,30 @@ export default function Budget() {
   const [showResetModal, setShowResetModal] = useState(false);
 
   const loadData = () => {
-    const savedOrders = JSON.parse(localStorage.getItem('ordersData') || '[]');
-    const totalSales = savedOrders.reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0);
+    const { orders, expenses: expList } = getLocalData();
+    const totalSales = orders.reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0);
     setRevenues(totalSales);
-    setOrdersCount(savedOrders.length);
+    setOrdersCount(orders.length);
 
-    const savedExpenses = JSON.parse(localStorage.getItem('expensesData') || '[]');
-    const totalExp = savedExpenses.reduce((sum: number, exp: any) => sum + (Number(exp.amount) || 0), 0);
+    const totalExp = expList.reduce((sum: number, exp: any) => sum + (Number(exp.amount) || 0), 0);
     setExpenses(totalExp);
-    setExpensesCount(savedExpenses.length);
+    setExpensesCount(expList.length);
   };
 
   useEffect(() => {
     loadData();
+    syncWithServer().then(() => loadData());
+
+    const handleUpdate = () => loadData();
+    window.addEventListener(EVENT_DATA_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENT_DATA_UPDATED, handleUpdate);
   }, []);
 
   const netProfit = revenues - expenses;
   const profitMargin = revenues > 0 ? ((netProfit / revenues) * 100).toFixed(1) : '0.0';
 
-  const handleResetData = () => {
-    localStorage.removeItem('ordersData');
-    localStorage.removeItem('expensesData');
-    localStorage.removeItem('insights_timestamp');
-    localStorage.removeItem('insights_data');
+  const handleResetData = async () => {
+    await resetDatabase();
     loadData();
     setShowResetModal(false);
   };

@@ -11,6 +11,7 @@ import { Fabric, Order, OrderStatus, PaymentMethod } from '../types';
 import { formatDateTime, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
 import NasjahLogo from '../components/NasjahLogo';
 import WhatsAppIcon from '../components/WhatsAppIcon';
+import { persistOrders, getLocalData, syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -43,17 +44,28 @@ export default function Orders() {
   });
 
   useEffect(() => {
-    const savedOrders: Order[] = JSON.parse(localStorage.getItem('ordersData') || '[]');
-    setOrders(savedOrders);
+    const local = getLocalData();
+    setOrders(local.orders);
+    setFabrics(local.inventory);
 
-    const savedFabrics = JSON.parse(localStorage.getItem('inventory') || '[]');
-    setFabrics(savedFabrics);
+    syncWithServer().then((latest) => {
+      setOrders(latest.orders);
+      setFabrics(latest.inventory);
+    });
+
+    const handleUpdate = () => {
+      const current = getLocalData();
+      setOrders(current.orders);
+      setFabrics(current.inventory);
+    };
+
+    window.addEventListener(EVENT_DATA_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENT_DATA_UPDATED, handleUpdate);
   }, []);
 
   const saveOrders = (updated: Order[]) => {
     setOrders(updated);
-    localStorage.setItem('ordersData', JSON.stringify(updated));
-    localStorage.removeItem('insights_timestamp');
+    persistOrders(updated);
   };
 
   const openCreateModal = () => {

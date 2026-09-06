@@ -8,6 +8,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
 import NasjahLogo from './NasjahLogo';
 import { PWAInstallButton } from './PWAInstallButton';
 
@@ -49,8 +50,16 @@ export default function Layout() {
 
   useEffect(() => {
     updateBadges();
-    const interval = setInterval(updateBadges, 3000);
-    return () => clearInterval(interval);
+    syncWithServer().then(() => updateBadges());
+
+    const handleUpdate = () => updateBadges();
+    window.addEventListener(EVENT_DATA_UPDATED, handleUpdate);
+    const interval = setInterval(updateBadges, 4000);
+
+    return () => {
+      window.removeEventListener(EVENT_DATA_UPDATED, handleUpdate);
+      clearInterval(interval);
+    };
   }, []);
 
   // Close menu on route change

@@ -6,6 +6,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Expense, PaymentMethod } from '../types';
 import { formatDateTime, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
+import { persistExpenses, getLocalData, syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
 
 const EXPENSE_CATEGORIES = [
   'أقمشة ومواد خام',
@@ -44,14 +45,25 @@ export default function Expenses() {
   });
 
   useEffect(() => {
-    const saved: Expense[] = JSON.parse(localStorage.getItem('expensesData') || '[]');
-    setExpenses(saved);
+    const local = getLocalData();
+    setExpenses(local.expenses);
+
+    syncWithServer().then((latest) => {
+      setExpenses(latest.expenses);
+    });
+
+    const handleUpdate = () => {
+      const current = getLocalData();
+      setExpenses(current.expenses);
+    };
+
+    window.addEventListener(EVENT_DATA_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENT_DATA_UPDATED, handleUpdate);
   }, []);
 
   const saveExpenses = (updated: Expense[]) => {
     setExpenses(updated);
-    localStorage.setItem('expensesData', JSON.stringify(updated));
-    localStorage.removeItem('insights_timestamp');
+    persistExpenses(updated);
   };
 
   const openCreateModal = () => {

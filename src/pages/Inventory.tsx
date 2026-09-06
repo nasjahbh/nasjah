@@ -1,35 +1,52 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
 import { Fabric } from '../types';
 import { Plus, AlertCircle, Image as ImageIcon, Upload, Trash2, Minus, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { persistInventory, getLocalData, syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
 
 export default function Inventory() {
   const [inventory, setInventory] = useState<Fabric[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [fabricToDelete, setFabricToDelete] = useState<Fabric | null>(null);
   const [newFabric, setNewFabric] = useState({ name: '', quantity: 1, price: 0, imageUrl: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('inventory');
-    if (saved) {
-      try {
-        setInventory(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    const local = getLocalData();
+    setInventory(local.inventory);
+
+    syncWithServer().then((latest) => {
+      setInventory(latest.inventory);
+    });
+
+    const handleUpdate = () => {
+      const current = getLocalData();
+      setInventory(current.inventory);
+    };
+
+    window.addEventListener(EVENT_DATA_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENT_DATA_UPDATED, handleUpdate);
   }, []);
 
   const saveInventory = (updated: Fabric[]) => {
     setInventory(updated);
-    localStorage.setItem('inventory', JSON.stringify(updated));
+    persistInventory(updated);
+  };
+
+  const confirmDeleteFabric = async () => {
+    if (!fabricToDelete) return;
+    const updated = inventory.filter(item => item.id !== fabricToDelete.id);
+    saveInventory(updated);
     try {
-      if (supabase) {
-        Promise.resolve(supabase.from('inventory').upsert(updated)).catch(() => {});
-      }
+      await fetch(`/api/inventory/${encodeURIComponent(fabricToDelete.id)}`, { method: 'DELETE' });
     } catch {}
+    setFabricToDelete(null);
+  };
+
+  const handleDeleteAllFabrics = () => {
+    if (inventory.length === 0) return;
+    saveInventory([]);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,13 +88,6 @@ export default function Inventory() {
       return item;
     });
     saveInventory(updated);
-  };
-
-  const handleDeleteFabric = (id: string, name: string) => {
-    if (window.confirm(`هل أنت متأكد من حذف قماش "${name}" من المخزون؟`)) {
-      const updated = inventory.filter(item => item.id !== id);
-      saveInventory(updated);
-    }
   };
 
   const filteredInventory = inventory.filter(item => 
@@ -182,8 +192,12 @@ export default function Inventory() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-xs text-emerald-950 truncate">{item.name}</h3>
                     <button
-                      onClick={() => handleDeleteFabric(item.id, item.name)}
-                      className="p-1 text-emerald-700/40 hover:text-red-600 transition"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setFabricToDelete(item);
+                      }}
+                      className="p-1.5 text-emerald-700/50 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       title="حذف القماش"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -345,6 +359,53 @@ export default function Inventory() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Fabric Confirmation Modal */}
+      <AnimatePresence>
+        {fabricToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setFabricToDelete(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl z-10 text-center space-y-4 border border-emerald-900/15"
+            >
+              <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-emerald-950">تأكيد حذف القماش</h3>
+                <p className="text-xs text-emerald-800/70 mt-1">
+                  هل أنت متأكد من حذف قماش <strong className="text-emerald-950 font-bold">"{fabricToDelete.name}"</strong> نهائياً من المخزون؟
+                </p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setFabricToDelete(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-emerald-900/20 text-emerald-900 font-bold text-xs hover:bg-emerald-50 transition"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteFabric}
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition shadow-sm"
+                >
+                  نعم، احذف القماش
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

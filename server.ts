@@ -3,13 +3,119 @@ import http from "http";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import {
+  getUserData,
+  syncUserData,
+  saveOrder,
+  deleteOrder,
+  saveExpense,
+  deleteExpense,
+  saveInventoryItem,
+  deleteInventoryItem,
+  resetStoreData,
+} from "./server/db";
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
   const httpServer = http.createServer(app);
 
-  app.use(express.json());
+  app.use(express.json({ limit: "25mb" }));
+
+  // Database API Endpoints (UID and credentials strictly guarded on server)
+  app.get("/api/store-data", (req, res) => {
+    try {
+      const data = getUserData();
+      res.json({ success: true, ...data });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/sync", (req, res) => {
+    try {
+      const { orders, expenses, inventory } = req.body || {};
+      const result = syncUserData({ orders, expenses, inventory });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/orders", (req, res) => {
+    try {
+      const order = req.body;
+      if (!order || !order.id) {
+        return res.status(400).json({ success: false, message: "Order id is required" });
+      }
+      const saved = saveOrder(order);
+      res.json({ success: true, order: saved });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.delete("/api/orders/:id", (req, res) => {
+    try {
+      deleteOrder(req.params.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/expenses", (req, res) => {
+    try {
+      const expense = req.body;
+      if (!expense || !expense.id) {
+        return res.status(400).json({ success: false, message: "Expense id is required" });
+      }
+      const saved = saveExpense(expense);
+      res.json({ success: true, expense: saved });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.delete("/api/expenses/:id", (req, res) => {
+    try {
+      deleteExpense(req.params.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/inventory", (req, res) => {
+    try {
+      const item = req.body;
+      if (!item || !item.id) {
+        return res.status(400).json({ success: false, message: "Inventory item id is required" });
+      }
+      const saved = saveInventoryItem(item);
+      res.json({ success: true, item: saved });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.delete("/api/inventory/:id", (req, res) => {
+    try {
+      deleteInventoryItem(req.params.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/reset-data", (req, res) => {
+    try {
+      resetStoreData();
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
 
   // AI API endpoint
   app.post("/api/insights", async (req, res) => {

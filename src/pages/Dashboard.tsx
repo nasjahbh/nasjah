@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { formatDateTime } from '../lib/dateUtils';
 import NasjahLogo from '../components/NasjahLogo';
 import WhatsAppIcon from '../components/WhatsAppIcon';
+import { getLocalData, persistOrders, syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
 
 export default function Dashboard() {
   const [sales, setSales] = useState(0);
@@ -18,18 +19,31 @@ export default function Dashboard() {
   const [insights, setInsights] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  useEffect(() => {
-    const savedOrders = JSON.parse(localStorage.getItem('ordersData') || '[]');
-    setOrders(savedOrders);
-    const totalSales = savedOrders.reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0) || 0;
+  const reloadDashboardData = () => {
+    const local = getLocalData();
+    setOrders(local.orders);
+    const totalSales = local.orders.reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0) || 0;
     setSales(totalSales);
 
-    const savedExpenses = JSON.parse(localStorage.getItem('expensesData') || '[]');
-    const totalExp = savedExpenses.reduce((sum: number, exp: any) => sum + (Number(exp.amount) || 0), 0) || 0;
+    const totalExp = local.expenses.reduce((sum: number, exp: any) => sum + (Number(exp.amount) || 0), 0) || 0;
     setExpenses(totalExp);
 
-    const savedFabrics = JSON.parse(localStorage.getItem('inventory') || '[]');
-    setFabrics(savedFabrics);
+    setFabrics(local.inventory);
+    return { totalSales, totalExp, fabrics: local.inventory };
+  };
+
+  useEffect(() => {
+    const { totalSales, totalExp, fabrics: currentFabrics } = reloadDashboardData();
+
+    syncWithServer().then(() => {
+      reloadDashboardData();
+    });
+
+    const handleDataEvent = () => {
+      reloadDashboardData();
+    };
+
+    window.addEventListener(EVENT_DATA_UPDATED, handleDataEvent);
 
     const checkAndFetchData = async () => {
       if (totalSales === 0 && totalExp === 0) {
@@ -54,7 +68,7 @@ export default function Dashboard() {
         const insightsRes = await fetch('/api/insights', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sales: totalSales, expenses: totalExp, inventory: savedFabrics })
+          body: JSON.stringify({ sales: totalSales, expenses: totalExp, inventory: currentFabrics })
         });
         
         if (insightsRes.ok && insightsRes.headers.get('content-type')?.includes('application/json')) {
@@ -73,6 +87,10 @@ export default function Dashboard() {
     };
 
     checkAndFetchData();
+
+    return () => {
+      window.removeEventListener(EVENT_DATA_UPDATED, handleDataEvent);
+    };
   }, []);
 
   const lowStockFabrics = fabrics.filter(f => (Number(f.quantity) || 0) <= 2);
@@ -93,9 +111,7 @@ export default function Dashboard() {
       return o;
     });
     setOrders(updated);
-    localStorage.setItem('ordersData', JSON.stringify(updated));
-    localStorage.removeItem('insights_timestamp');
-    window.dispatchEvent(new Event('storage'));
+    persistOrders(updated);
   };
 
   if (isInitializing) {
