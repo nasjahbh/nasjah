@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { isEmailAuthorized } from '../lib/security';
+import { syncWithServer } from '../lib/dataService';
 
 export default function ProtectedRoute() {
   const [loading, setLoading] = useState(true);
@@ -23,6 +24,8 @@ export default function ProtectedRoute() {
           setAuthenticated(false);
         } else {
           setAuthenticated(true);
+          // Sync cloud data across devices immediately
+          syncWithServer().catch(() => {});
         }
       } else {
         setAuthenticated(false);
@@ -40,6 +43,7 @@ export default function ProtectedRoute() {
           setAuthenticated(false);
         } else {
           setAuthenticated(true);
+          syncWithServer().catch(() => {});
         }
       } else {
         setAuthenticated(false);

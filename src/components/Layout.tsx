@@ -3,7 +3,8 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, ShoppingBag, Layers, Receipt, TrendingUp, 
   Menu, X, LogOut, Plus, ChevronLeft, Calendar,
-  Instagram, PlusCircle, ArrowUpRight, User, ShieldCheck
+  Instagram, PlusCircle, ArrowUpRight, User, ShieldCheck,
+  Cloud, RefreshCw
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
@@ -18,8 +19,20 @@ export default function Layout() {
   const [lowStockCount, setLowStockCount] = useState(0);
   const [totalSales, setTotalSales] = useState(0);
   const [userEmail, setUserEmail] = useState<string>('');
+  const [isSyncingData, setIsSyncingData] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const handleManualSync = async () => {
+    if (isSyncingData) return;
+    setIsSyncingData(true);
+    try {
+      await syncWithServer();
+      updateBadges();
+    } finally {
+      setTimeout(() => setIsSyncingData(false), 800);
+    }
+  };
 
   useEffect(() => {
     if (supabase) {
@@ -319,8 +332,16 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Mobile Hamburger Drawer Trigger & PWA */}
-        <div className="flex items-center gap-2">
+        {/* Mobile Hamburger Drawer Trigger, PWA & Cloud Sync */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={handleManualSync}
+            disabled={isSyncingData}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-emerald-900/80 hover:bg-emerald-800 text-amber-300 transition border border-emerald-800/40 active:scale-95 disabled:opacity-75"
+            title="مزامنة مع قاعدة البيانات السحابية"
+          >
+            <RefreshCw className={cn("w-4 h-4", isSyncingData && "animate-spin text-amber-400")} />
+          </button>
           <PWAInstallButton />
           <button
             onClick={() => setIsMenuOpen(true)}
@@ -347,6 +368,16 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncingData}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 rounded-xl border border-emerald-900/15 text-xs font-bold transition active:scale-95 disabled:opacity-75"
+              title="مزامنة البيانات سحابياً بين جميع أجهزتك"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5 text-emerald-700", isSyncingData && "animate-spin text-emerald-900")} />
+              <span>{isSyncingData ? 'جارِ المزامنة...' : 'مزامنة سحابية'}</span>
+            </button>
+
             <PWAInstallButton />
 
             <div className="flex items-center gap-2 text-xs text-emerald-800/70 bg-emerald-50 px-3.5 py-1.5 rounded-xl border border-emerald-900/10">

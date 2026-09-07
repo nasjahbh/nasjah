@@ -19,6 +19,7 @@ import {
   MAX_ALLOWED_ATTEMPTS,
   SecurityState 
 } from '../lib/security';
+import { syncWithServer } from '../lib/dataService';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -87,6 +88,9 @@ export default function Login() {
 
       if (data.session) {
         resetFailedAttempts();
+        try {
+          await syncWithServer();
+        } catch {}
         navigate('/');
       }
     } catch (err: any) {
