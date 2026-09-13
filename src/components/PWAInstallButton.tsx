@@ -30,10 +30,10 @@ export const PWAInstallButton: React.FC<{ className?: string }> = ({ className =
     <button
       onClick={handleInstallClick}
       disabled={installing}
-      className={`inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-800 to-emerald-900 hover:from-emerald-700 hover:to-emerald-800 text-amber-300 px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition-all border border-emerald-700/50 active:scale-95 disabled:opacity-75 ${className}`}
+      className={`inline-flex items-center gap-1.5 bg-[#1D3A30] hover:bg-[#25493D] text-[#E8D5A8] px-3 py-1.5 rounded-xl text-xs font-bold shadow-xs transition-all border border-[#C7B895]/40 active:scale-95 disabled:opacity-75 ${className}`}
       title="تثبيت تطبيق دار نَسْجَة مباشرة على جهازك"
     >
-      <Download className={`w-3.5 h-3.5 text-amber-300 ${installing ? 'animate-pulse' : 'animate-bounce'}`} />
+      <Download className={`w-3.5 h-3.5 text-[#C7B895] ${installing ? 'animate-pulse' : ''}`} />
       <span>{installing ? 'جاري التثبيت...' : 'تثبيت التطبيق'}</span>
     </button>
   );

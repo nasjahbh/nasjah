@@ -26,7 +26,7 @@ export default function NasjahLogo({
   if (variant === 'icon' || variant === 'emblem') {
     return (
       <div 
-        className={`relative overflow-hidden rounded-2xl flex items-center justify-center shadow-xs border border-emerald-800/40 select-none ${sizeMap[size]} ${className}`}
+        className={`relative overflow-hidden rounded-2xl flex items-center justify-center shadow-xs border border-[#C7B895]/40 select-none bg-[#1D3A30] ${sizeMap[size]} ${className}`}
         title="شعار نَسْجَة"
       >
         <img 
@@ -43,7 +43,7 @@ export default function NasjahLogo({
   if (variant === 'mark') {
     return (
       <div className={`flex items-center gap-2.5 select-none ${className}`}>
-        <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center border border-emerald-800/50 shadow-xs flex-shrink-0">
+        <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center border border-[#C7B895]/40 shadow-xs flex-shrink-0 bg-[#1D3A30]">
           <img 
             src="/nasjah-logo.jpeg" 
             alt="أيقونة نَسْجَة" 
@@ -54,14 +54,14 @@ export default function NasjahLogo({
         {showText && (
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-sm tracking-wider uppercase text-emerald-100 font-sans">
+              <span className="font-extrabold text-sm tracking-wider uppercase text-[#FAF7F0] font-sans">
                 نَسْجَة
               </span>
-              <span className="text-[10px] bg-emerald-800/90 text-amber-300 px-1.5 py-0.2 rounded font-bold">
-                احترافي
+              <span className="text-[10px] bg-[#C7B895]/20 text-[#E8D5A8] border border-[#C7B895]/40 px-1.5 py-0.2 rounded font-bold">
+                فاخر
               </span>
             </div>
-            <p className="text-[10px] text-emerald-400 font-medium truncate">
+            <p className="text-[10px] text-[#C7B895] font-medium truncate">
               دار خياطة وتفصيل الأقمشة
             </p>
           </div>
@@ -76,7 +76,7 @@ export default function NasjahLogo({
       <img 
         src="/nasjah-logo.jpeg" 
         alt="شعار نَسْجَة" 
-        className="w-full h-auto max-w-[280px] rounded-3xl shadow-lg border border-emerald-800/30 object-contain"
+        className="w-full h-auto max-w-[280px] rounded-3xl shadow-lg border border-[#C7B895]/40 object-contain"
         referrerPolicy="no-referrer"
       />
     </div>

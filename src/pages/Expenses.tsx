@@ -6,7 +6,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Expense, PaymentMethod } from '../types';
 import { formatDateTime, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
-import { persistExpenses, getLocalData, syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
+import { persistExpenses, deleteExpensePermanently, getLocalData, syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
 
 const EXPENSE_CATEGORIES = [
   'أقمشة ومواد خام',
@@ -139,11 +139,12 @@ export default function Expenses() {
     setShowModal(false);
   };
 
-  const confirmDeleteExpense = () => {
+  const confirmDeleteExpense = async () => {
     if (!expenseToDelete) return;
-    const updated = expenses.filter(exp => exp.id !== expenseToDelete.id);
-    saveExpenses(updated);
+    const expenseId = expenseToDelete.id;
     setExpenseToDelete(null);
+    const updated = await deleteExpensePermanently(expenseId);
+    setExpenses(updated);
   };
 
   // Filter logic
@@ -181,18 +182,18 @@ export default function Expenses() {
   return (
     <div className="space-y-3.5 pb-6">
       {/* Top Mobile Header & Add Button */}
-      <div className="flex items-center justify-between bg-white px-3.5 py-3 rounded-2xl border border-emerald-900/10 shadow-xs">
+      <div className="flex items-center justify-between bg-white px-4 py-3 rounded-2xl border border-[#C7B895]/30 shadow-xs">
         <div>
-          <h1 className="text-base font-extrabold text-emerald-950">سجل المصروفات والنفقات</h1>
-          <p className="text-[11px] text-red-700/80 font-medium">
-            {expenses.length} بند • إجمالي: {totalAmount.toFixed(2)} د.ب
+          <h1 className="text-base font-extrabold text-[#1D3A30]">سجل المصروفات والنفقات</h1>
+          <p className="text-[11px] text-[#1D3A30]/70 font-medium">
+            {expenses.length} بند • إجمالي: <span className="font-bold text-rose-700 font-mono">{totalAmount.toFixed(2)} د.ب</span>
           </p>
         </div>
         <button
           onClick={openCreateModal}
-          className="bg-red-700 text-white px-3 py-2 rounded-xl text-xs font-bold hover:bg-red-800 transition flex items-center gap-1 shadow-xs active:scale-95"
+          className="bg-[#1D3A30] text-[#E8D5A8] px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-[#25493D] transition flex items-center gap-1.5 shadow-xs active:scale-95 border border-[#C7B895]/30"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 text-[#C7B895]" />
           <span>مصروف جديد</span>
         </button>
       </div>
@@ -201,18 +202,18 @@ export default function Expenses() {
       <div className="space-y-2">
         {/* Search Bar */}
         <div className="relative">
-          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-emerald-800/40" />
+          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-[#1D3A30]/40" />
           <input
             type="text"
             placeholder="بحث بوصف المصروف، التصنيف، أو المدفوع له..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white pr-9 pl-8 py-2 text-xs rounded-xl border border-emerald-900/10 text-emerald-950 placeholder-emerald-800/40 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+            className="w-full bg-white pr-9 pl-8 py-2.5 text-xs rounded-xl border border-[#C7B895]/30 text-[#1D3A30] placeholder-[#1D3A30]/40 focus:outline-none focus:ring-1 focus:ring-[#1D3A30]"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-emerald-800/40 hover:text-emerald-950"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#1D3A30]/50 hover:text-[#1D3A30]"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -223,10 +224,10 @@ export default function Expenses() {
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
           <button
             onClick={() => setCategoryFilter('all')}
-            className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
               categoryFilter === 'all'
-                ? 'bg-emerald-900 text-white shadow-xs'
-                : 'bg-white text-emerald-900/70 border border-emerald-900/10'
+                ? 'bg-[#1D3A30] text-[#FAF7F0] shadow-xs border border-[#1D3A30]'
+                : 'bg-white text-[#1D3A30]/70 border border-[#C7B895]/30 hover:border-[#C7B895]'
             }`}
           >
             الكل ({expenses.length})
@@ -236,10 +237,10 @@ export default function Expenses() {
             <button
               key={cat}
               onClick={() => setCategoryFilter(categoryFilter === cat ? 'all' : cat)}
-              className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
                 categoryFilter === cat
-                  ? 'bg-red-800 text-white shadow-xs'
-                  : 'bg-white text-emerald-900/70 border border-emerald-900/10'
+                  ? 'bg-[#1D3A30] text-[#E8D5A8] shadow-xs border border-[#C7B895]'
+                  : 'bg-white text-[#1D3A30]/70 border border-[#C7B895]/30 hover:border-[#C7B895]'
               }`}
             >
               {cat}
@@ -250,13 +251,15 @@ export default function Expenses() {
 
       {/* Expenses Mobile Cards Feed */}
       {filteredExpenses.length === 0 ? (
-        <div className="bg-white rounded-3xl p-8 text-center border border-emerald-900/10 shadow-xs">
-          <Receipt className="w-10 h-10 text-emerald-800/30 mx-auto mb-2" />
-          <h3 className="text-sm font-bold text-emerald-950">لا توجد مصروفات مسجلة</h3>
-          <p className="text-xs text-emerald-800/60 mt-1">سجل نفقات المتجر لحساب الأرباح بدقة</p>
+        <div className="bg-white rounded-3xl p-8 text-center border border-[#C7B895]/30 shadow-xs">
+          <div className="w-12 h-12 bg-[#FAF7F0] text-[#1D3A30] rounded-full flex items-center justify-center mx-auto mb-2 border border-[#C7B895]/30">
+            <Receipt className="w-6 h-6 text-[#A99872]" />
+          </div>
+          <h3 className="text-sm font-bold text-[#1D3A30]">لا توجد مصروفات مسجلة</h3>
+          <p className="text-xs text-[#1D3A30]/60 mt-1">سجل نفقات المتجر لحساب الأرباح بدقة</p>
           <button
             onClick={openCreateModal}
-            className="mt-4 bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-xl"
+            className="mt-4 bg-[#1D3A30] text-[#E8D5A8] text-xs font-bold px-4 py-2.5 rounded-xl border border-[#C7B895]/30"
           >
             + تسجيل مصروف جديد الآن
           </button>
@@ -272,48 +275,48 @@ export default function Expenses() {
                 layout
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl p-3.5 border border-emerald-900/10 shadow-xs hover:border-emerald-300 transition"
+                className="bg-white rounded-2xl p-3.5 border border-[#C7B895]/30 shadow-xs hover:border-[#C7B895] transition"
               >
                 {/* Header: Category Badge + Amount */}
-                <div className="flex items-center justify-between gap-2 pb-2 border-b border-emerald-900/5">
-                  <span className="text-[10px] font-bold bg-emerald-100/70 text-emerald-900 px-2 py-0.5 rounded-full">
+                <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#C7B895]/20">
+                  <span className="text-[10px] font-bold bg-[#FAF7F0] text-[#1D3A30] px-2.5 py-0.5 rounded-full border border-[#C7B895]/30">
                     {exp.category || 'عام ومصاريف أخرى'}
                   </span>
                   
-                  <span className="text-sm font-black text-red-700 font-mono">
+                  <span className="text-sm font-black text-rose-700 font-mono">
                     -{Number(exp.amount).toFixed(2)}{' '}
                     <span className="text-[10px] font-bold">د.ب</span>
                   </span>
                 </div>
 
                 {/* Body: Description, Paid To & Notes */}
-                <div className="py-2">
-                  <h3 className="text-xs font-bold text-emerald-950 leading-snug">
+                <div className="py-2.5">
+                  <h3 className="text-xs font-bold text-[#1D3A30] leading-snug">
                     {exp.description}
                   </h3>
 
                   {exp.paidTo && (
-                    <div className="flex items-center gap-1 text-[11px] text-emerald-800/80 mt-1">
-                      <UserCheck className="w-3 h-3 text-emerald-700" />
-                      <span>المدفوع له: <strong>{exp.paidTo}</strong></span>
+                    <div className="flex items-center gap-1.5 text-[11px] text-[#1D3A30]/80 mt-1.5">
+                      <UserCheck className="w-3.5 h-3.5 text-[#A99872]" />
+                      <span>المدفوع له: <strong className="text-[#1D3A30]">{exp.paidTo}</strong></span>
                     </div>
                   )}
 
                   {exp.notes && (
-                    <p className="text-[10px] bg-slate-50 text-slate-700 p-1.5 rounded-lg mt-1.5 border border-slate-200/60">
+                    <p className="text-[10px] bg-[#FAF7F0] text-[#1D3A30]/80 p-2 rounded-xl mt-2 border border-[#C7B895]/20">
                       ملاحظة: {exp.notes}
                     </p>
                   )}
                 </div>
 
                 {/* Footer: Date & Time, Payment Method, Actions */}
-                <div className="pt-2 border-t border-emerald-900/5 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-800/60 font-mono">
-                    <span className="bg-emerald-50 px-1.5 py-0.5 rounded text-emerald-800 font-medium">
+                <div className="pt-2 border-t border-[#C7B895]/20 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[10px] text-[#1D3A30]/60 font-mono">
+                    <span className="bg-[#FAF7F0] px-2 py-0.5 rounded-md text-[#1D3A30] font-medium border border-[#C7B895]/20">
                       {exp.paymentMethod || 'بنفت بي'}
                     </span>
                     <span>•</span>
-                    <span className={isToday ? "font-bold text-emerald-900" : ""}>
+                    <span className={isToday ? "font-bold text-[#1D3A30]" : ""}>
                       {full}
                     </span>
                   </div>
@@ -322,15 +325,15 @@ export default function Expenses() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => openEditModal(exp)}
-                      className="p-1.5 text-blue-700 hover:bg-blue-50 rounded-lg transition"
+                      className="p-1.5 text-[#1D3A30]/70 hover:text-[#1D3A30] hover:bg-[#FAF7F0] rounded-lg transition"
                       title="تعديل تفاصيل المصروف"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => setExpenseToDelete(exp)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
-                      title="حذف المصروف الخاطئ"
+                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                      title="حذف المصروف"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -359,20 +362,20 @@ export default function Expenses() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-              className="relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl z-10 max-h-[90dvh] flex flex-col overflow-hidden"
+              className="relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl z-10 max-h-[90dvh] flex flex-col overflow-hidden border border-[#C7B895]/30"
             >
-              <div className="p-4 border-b border-emerald-900/10 flex justify-between items-center bg-red-950 text-red-50">
+              <div className="p-4 border-b border-[#C7B895]/30 flex justify-between items-center bg-[#1D3A30] text-[#FAF7F0]">
                 <div>
-                  <h3 className="text-sm font-bold">
+                  <h3 className="text-sm font-bold text-[#FAF7F0]">
                     {modalMode === 'edit' ? 'تعديل بيانات المصروف' : 'تسجيل مصروف جديد'}
                   </h3>
-                  <p className="text-[10px] text-red-300">
+                  <p className="text-[10px] text-[#E8D5A8]">
                     {modalMode === 'edit' ? 'تصحيح الأخطاء أو تعديل التوقيت' : 'سجل نفقات وتشغيل المتجر'}
                   </p>
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="p-1.5 rounded-lg bg-red-900 text-red-200 hover:text-white"
+                  className="p-1.5 rounded-lg bg-white/10 text-[#E8D5A8] hover:text-white"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -380,7 +383,7 @@ export default function Expenses() {
 
               <form onSubmit={handleSaveExpense} className="flex-1 overflow-y-auto p-4 space-y-3 text-xs no-scrollbar">
                 <div>
-                  <label className="block text-[11px] font-bold text-emerald-950 mb-1">
+                  <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
                     بيان / وصف المصروف *
                   </label>
                   <input
@@ -389,13 +392,13 @@ export default function Expenses() {
                     placeholder="مثال: شراء لفافات أقمشة قطن، فاتورة كهرباء المتجر..."
                     value={expenseForm.description}
                     onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-emerald-900/15 focus:ring-1 focus:ring-red-700 outline-none text-xs"
+                    className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs text-[#1D3A30]"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-bold text-emerald-950 mb-1">
+                    <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
                       المبلغ (د.ب) *
                     </label>
                     <input
@@ -405,12 +408,12 @@ export default function Expenses() {
                       placeholder="0.00"
                       value={expenseForm.amount}
                       onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                      className="w-full p-2.5 rounded-xl border border-emerald-900/15 focus:ring-1 focus:ring-red-700 outline-none text-xs font-bold font-mono"
+                      className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs font-bold font-mono text-[#1D3A30]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-emerald-950 mb-1">
+                    <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
                       المدفوع له (المورد / الجهة)
                     </label>
                     <input
@@ -418,20 +421,20 @@ export default function Expenses() {
                       placeholder="اسم المحل أو الشخص"
                       value={expenseForm.paidTo}
                       onChange={(e) => setExpenseForm({ ...expenseForm, paidTo: e.target.value })}
-                      className="w-full p-2.5 rounded-xl border border-emerald-900/15 focus:ring-1 focus:ring-red-700 outline-none text-xs"
+                      className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs text-[#1D3A30]"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-bold text-emerald-950 mb-1">
+                    <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
                       التصنيف
                     </label>
                     <select
                       value={expenseForm.category}
                       onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
-                      className="w-full p-2.5 rounded-xl border border-emerald-900/15 focus:ring-1 focus:ring-red-700 outline-none text-xs bg-white"
+                      className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs bg-white text-[#1D3A30]"
                     >
                       {EXPENSE_CATEGORIES.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
@@ -440,13 +443,13 @@ export default function Expenses() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-emerald-950 mb-1">
+                    <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
                       طريقة الدفع
                     </label>
                     <select
                       value={expenseForm.paymentMethod}
                       onChange={(e) => setExpenseForm({ ...expenseForm, paymentMethod: e.target.value as PaymentMethod })}
-                      className="w-full p-2.5 rounded-xl border border-emerald-900/15 focus:ring-1 focus:ring-red-700 outline-none text-xs bg-white"
+                      className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs bg-white text-[#1D3A30]"
                     >
                       <option value="بنفت بي">بنفت بي (BenefitPay)</option>
                       <option value="نقداً">نقداً (Cash)</option>
@@ -459,19 +462,19 @@ export default function Expenses() {
 
                 {/* Date & Time Picker */}
                 <div>
-                  <label className="block text-[11px] font-bold text-emerald-950 mb-1">
+                  <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
                     تاريخ ووقت الصرف (بالدقيقة والساعة)
                   </label>
                   <input
                     type="datetime-local"
                     value={expenseForm.datetimeStr}
                     onChange={(e) => setExpenseForm({ ...expenseForm, datetimeStr: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-emerald-900/15 focus:ring-1 focus:ring-red-700 outline-none text-xs font-mono"
+                    className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs font-mono text-[#1D3A30]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-emerald-950 mb-1">
+                  <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
                     ملاحظات أو رقم السند
                   </label>
                   <input
@@ -479,14 +482,14 @@ export default function Expenses() {
                     placeholder="رقم الفاتورة الورقية أو السند..."
                     value={expenseForm.notes}
                     onChange={(e) => setExpenseForm({ ...expenseForm, notes: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-emerald-900/15 focus:ring-1 focus:ring-red-700 outline-none text-xs"
+                    className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs text-[#1D3A30]"
                   />
                 </div>
 
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full py-3 bg-red-700 text-white font-bold rounded-xl text-xs hover:bg-red-800 transition active:scale-98 shadow-sm"
+                    className="w-full py-3 bg-[#1D3A30] text-[#E8D5A8] font-bold rounded-xl text-xs hover:bg-[#25493D] transition active:scale-98 shadow-sm border border-[#C7B895]/30"
                   >
                     {modalMode === 'edit' ? 'حفظ التعديلات' : 'تسجيل المصروف'}
                   </button>
@@ -513,25 +516,25 @@ export default function Expenses() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl z-10 text-center space-y-3"
+              className="relative w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl z-10 text-center space-y-3 border border-[#C7B895]/30"
             >
-              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto">
+              <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border border-rose-200">
                 <AlertTriangle className="w-6 h-6" />
               </div>
-              <h3 className="text-sm font-bold text-emerald-950">تأكيد حذف المصروف</h3>
-              <p className="text-xs text-emerald-800/70">
+              <h3 className="text-sm font-bold text-[#1D3A30]">تأكيد حذف المصروف</h3>
+              <p className="text-xs text-[#1D3A30]/70">
                 هل أنت متأكد من حذف مصروف "{expenseToDelete.description}" بقيمة {expenseToDelete.amount} د.ب من السجلات؟
               </p>
               <div className="grid grid-cols-2 gap-2 pt-2">
                 <button
                   onClick={confirmDeleteExpense}
-                  className="py-2.5 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition"
+                  className="py-2.5 bg-rose-600 text-white font-bold rounded-xl text-xs hover:bg-rose-700 transition"
                 >
                   نعم، احذف المصروف
                 </button>
                 <button
                   onClick={() => setExpenseToDelete(null)}
-                  className="py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-200 transition"
+                  className="py-2.5 bg-stone-100 text-stone-700 font-bold rounded-xl text-xs hover:bg-stone-200 transition border border-stone-200"
                 >
                   إلغاء
                 </button>

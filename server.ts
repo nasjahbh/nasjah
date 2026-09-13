@@ -22,6 +22,10 @@ async function startServer() {
 
   app.use(express.json({ limit: "25mb" }));
 
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: Date.now() });
+  });
+
   // Database API Endpoints (UID and credentials strictly guarded on server)
   app.get("/api/store-data", (req, res) => {
     try {

@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+@theme {
+  --color-atelier-dark: #1D3A30;
+  --color-atelier-dark-surface: #25493D;
+  --color-atelier-dark-light: #2E584A;
+  --color-atelier-dark-deep: #132620;
+  
+  --color-atelier-gold: #C7B895;
+  --color-atelier-gold-dark: #A99872;
+  --color-atelier-gold-light: #D8CCB0;
+  
+  --color-atelier-champagne: #E8D5A8;
+  --color-atelier-champagne-light: #F4EBD4;
+  --color-atelier-champagne-subtle: #FAF6EC;
+  
+  --color-atelier-bg: #FAF7F0;
+  --color-atelier-card: #FFFFFF;
+
+  --font-sans: 'Alexandria', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Outfit', monospace;
+}
+
 @layer base {
   html, body, #root {
     height: 100%;
@@ -9,12 +30,31 @@
     overflow: hidden !important;
     touch-action: pan-y;
     -webkit-tap-highlight-color: transparent;
-    background-color: #f4f7f5;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: #FAF7F0;
+    color: #1D3A30;
+    font-family: 'Alexandria', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 }
 
-/* Completely remove scrollbars from all elements while preserving scrolling */
+/* Custom modern luxury utility styles */
+.bg-atelier-dark { background-color: #1D3A30; }
+.bg-atelier-dark-surface { background-color: #25493D; }
+.bg-atelier-gold { background-color: #C7B895; }
+.bg-atelier-champagne { background-color: #E8D5A8; }
+.bg-atelier-champagne-light { background-color: #F4EBD4; }
+.bg-atelier-champagne-subtle { background-color: #FAF6EC; }
+.bg-atelier-bg { background-color: #FAF7F0; }
+
+.text-atelier-dark { color: #1D3A30; }
+.text-atelier-gold { color: #C7B895; }
+.text-atelier-gold-dark { color: #A99872; }
+.text-atelier-champagne { color: #E8D5A8; }
+
+.border-atelier-gold { border-color: #C7B895; }
+.border-atelier-champagne { border-color: #E8D5A8; }
+.border-atelier-dark { border-color: #1D3A30; }
+
+/* Completely remove scrollbars while preserving scrolling */
 * {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
