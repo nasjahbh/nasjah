@@ -177,7 +177,7 @@ export default function Layout() {
           {/* Cloud Storage Status Indicator */}
           <div 
             className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#25493D]/60 text-[#E8D5A8] rounded-xl border border-[#C7B895]/25 text-[11px] font-bold"
-            title="جميع البيانات والعمليات مخزنة سحابياً ومؤمنة دون أي تخزين محلي"
+            title="جميع البيانات والعمليات مخزنة سحابياً ومؤمنة"
           >
             <Cloud className="w-3.5 h-3.5 text-[#C7B895]" />
             <span>سحابي</span>

@@ -32,6 +32,7 @@ export default function Orders() {
   // Fabric selection in modal
   const [selectedFabricId, setSelectedFabricId] = useState<string | null>(null);
   const [selectedMeters, setSelectedMeters] = useState<number>(1);
+  const [metersInputStr, setMetersInputStr] = useState<string>('1');
   const [customFabricMode, setCustomFabricMode] = useState<boolean>(false);
   const [stockError, setStockError] = useState<string | null>(null);
 
@@ -88,6 +89,7 @@ export default function Orders() {
     setEditingOrderId(null);
     setSelectedFabricId(null);
     setSelectedMeters(1);
+    setMetersInputStr('1');
     setCustomFabricMode(false);
     setStockError(null);
     setOrderForm({
@@ -110,11 +112,14 @@ export default function Orders() {
 
     if (order.fabricId) {
       setSelectedFabricId(order.fabricId);
-      setSelectedMeters(order.fabricMeters || 1);
+      const m = order.fabricMeters || 1;
+      setSelectedMeters(m);
+      setMetersInputStr(String(m));
       setCustomFabricMode(false);
     } else {
       setSelectedFabricId(null);
       setSelectedMeters(1);
+      setMetersInputStr('1');
       setCustomFabricMode(true);
     }
 
@@ -135,7 +140,6 @@ export default function Orders() {
   const handleSelectFabric = (fabric: Fabric) => {
     const isAlreadySelected = selectedFabricId === fabric.id;
     if (isAlreadySelected) {
-      // Keep selected or refresh
       setSelectedFabricId(fabric.id);
     } else {
       setSelectedFabricId(fabric.id);
@@ -143,7 +147,8 @@ export default function Orders() {
     setCustomFabricMode(false);
     setStockError(null);
 
-    const meters = selectedMeters > 0 ? selectedMeters : 1;
+    const parsedM = parseFloat(metersInputStr);
+    const meters = !isNaN(parsedM) && parsedM > 0 ? parsedM : (selectedMeters > 0 ? selectedMeters : 1);
     const detailsText = `قماش ${fabric.name} (${meters} متر)`;
     
     // Auto-calculate suggested price if fabric has price
@@ -163,10 +168,11 @@ export default function Orders() {
     }
   };
 
-  // Handle changing meters
+  // Handle changing meters via stepper (+0.5 / -0.5) or quick chips
   const handleChangeMeters = (newMeters: number) => {
     const cleanMeters = Math.round(Math.max(0.1, newMeters) * 10) / 10;
     setSelectedMeters(cleanMeters);
+    setMetersInputStr(String(cleanMeters));
 
     const fabric = fabrics.find(f => f.id === selectedFabricId);
     if (fabric) {
@@ -190,6 +196,38 @@ export default function Orders() {
     }
   };
 
+  // Handle free-form typing of meters (e.g. "22.5", "3.5", "0.5")
+  const handleMetersInputChange = (rawVal: string) => {
+    setMetersInputStr(rawVal);
+    const parsed = parseFloat(rawVal);
+    if (!isNaN(parsed) && parsed > 0) {
+      setSelectedMeters(parsed);
+
+      const fabric = fabrics.find(f => f.id === selectedFabricId);
+      if (fabric) {
+        const detailsText = `قماش ${fabric.name} (${parsed} متر)`;
+        const suggestedPrice = fabric.price > 0 ? (fabric.price * parsed).toFixed(2) : orderForm.price;
+
+        setOrderForm(prev => ({
+          ...prev,
+          details: detailsText,
+          price: suggestedPrice || prev.price
+        }));
+
+        // Stock validation
+        if ((Number(fabric.quantity) || 0) <= 0) {
+          setStockError(`تنبيه: قماش "${fabric.name}" نفد من المخزون تماماً.`);
+        } else if (parsed > fabric.quantity) {
+          setStockError(`عذراً، الأمتار المطلوبة (${parsed} م) غير متوفرة. المتوفر حالياً بالمخزون هو ${fabric.quantity} متر فقط.`);
+        } else {
+          setStockError(null);
+        }
+      }
+    } else if (rawVal === '' || rawVal === '.') {
+      setStockError('يرجى كتابة عدد أمتار صحيح.');
+    }
+  };
+
   const handleSaveOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setStockError(null);
@@ -206,6 +244,10 @@ export default function Orders() {
     }
 
     const chosenFabric = fabrics.find(f => f.id === selectedFabricId);
+    const parsedFromInput = parseFloat(metersInputStr);
+    const effectiveMeters = !isNaN(parsedFromInput) && parsedFromInput > 0
+      ? Math.round(parsedFromInput * 10) / 10
+      : selectedMeters;
 
     // CRITICAL: Strict stock verification if choosing a fabric from inventory
     if (!customFabricMode && selectedFabricId && chosenFabric) {
@@ -216,11 +258,11 @@ export default function Orders() {
           setStockError(`عذراً، لا يمكن إتمام الطلب: قماش "${chosenFabric.name}" نفد من المخزون (0 متر متوفر).`);
           return;
         }
-        if (selectedMeters > availableQty) {
-          setStockError(`عذراً، لا يمكن إتمام الطلب: الأمتار المطلوبة (${selectedMeters} م) أكبر من المتوفر بالمخزون (${availableQty} م فقط).`);
+        if (effectiveMeters > availableQty) {
+          setStockError(`عذراً، لا يمكن إتمام الطلب: الأمتار المطلوبة (${effectiveMeters} م) أكبر من المتوفر بالمخزون (${availableQty} م فقط).`);
           return;
         }
-        if (selectedMeters <= 0) {
+        if (effectiveMeters <= 0) {
           setStockError('يرجى إدخال عدد أمتار صحيح أكبر من الصفر.');
           return;
         }
@@ -230,8 +272,8 @@ export default function Orders() {
         const prevMeters = (prevOrder?.fabricId === selectedFabricId) ? (prevOrder.fabricMeters || 0) : 0;
         const totalEffective = availableQty + prevMeters;
 
-        if (selectedMeters > totalEffective) {
-          setStockError(`عذراً، لا يمكن إتمام التعديل: الأمتار المطلوبة (${selectedMeters} م) تتجاوز الكمية المتوفرة (${totalEffective} م).`);
+        if (effectiveMeters > totalEffective) {
+          setStockError(`عذراً، لا يمكن إتمام التعديل: الأمتار المطلوبة (${effectiveMeters} م) تتجاوز الكمية المتوفرة (${totalEffective} م).`);
           return;
         }
       }
@@ -254,7 +296,7 @@ export default function Orders() {
       if (modalMode === 'create') {
         updatedFabrics = updatedFabrics.map(f => {
           if (f.id === selectedFabricId) {
-            const newQty = Math.max(0, (Number(f.quantity) || 0) - selectedMeters);
+            const newQty = Math.max(0, (Number(f.quantity) || 0) - effectiveMeters);
             return { ...f, quantity: Math.round(newQty * 10) / 10 };
           }
           return f;
@@ -274,7 +316,7 @@ export default function Orders() {
         // Deduct new meters
         updatedFabrics = updatedFabrics.map(f => {
           if (f.id === selectedFabricId) {
-            const newQty = Math.max(0, (Number(f.quantity) || 0) - selectedMeters);
+            const newQty = Math.max(0, (Number(f.quantity) || 0) - effectiveMeters);
             return { ...f, quantity: Math.round(newQty * 10) / 10 };
           }
           return f;
@@ -288,7 +330,7 @@ export default function Orders() {
     // STEP 2: Save order
     const finalDetails = orderForm.details.trim();
     const finalFabricId = !customFabricMode && selectedFabricId ? selectedFabricId : undefined;
-    const finalFabricMeters = !customFabricMode && selectedFabricId ? selectedMeters : undefined;
+    const finalFabricMeters = !customFabricMode && selectedFabricId ? effectiveMeters : undefined;
     const finalFabricName = !customFabricMode && chosenFabric ? chosenFabric.name : undefined;
 
     if (modalMode === 'edit' && editingOrderId) {
@@ -938,46 +980,61 @@ export default function Orders() {
                               </span>
                             </div>
 
-                            {/* Meter Stepper & Quick Pills */}
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center border border-[#C7B895]/40 rounded-xl overflow-hidden bg-[#FAF7F0]">
+                            {/* Meter Stepper & Quick Pills (Supports half fractions like 22.5) */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="flex items-center border border-[#C7B895]/40 rounded-xl overflow-hidden bg-[#FAF7F0] shadow-xs">
                                 <button
                                   type="button"
                                   onClick={() => handleChangeMeters(Math.max(0.5, selectedMeters - 0.5))}
-                                  className="p-2 hover:bg-[#C7B895]/20 text-[#1D3A30] transition active:scale-95"
-                                  title="إنقاص نصف متر"
+                                  className="px-2.5 py-2 hover:bg-[#C7B895]/20 text-[#1D3A30] transition active:scale-95"
+                                  title="إنقاص نصف متر (-0.5)"
                                 >
                                   <Minus className="w-3.5 h-3.5" />
                                 </button>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  min="0.1"
-                                  value={selectedMeters}
-                                  onChange={(e) => handleChangeMeters(parseFloat(e.target.value) || 0)}
-                                  className="w-16 text-center text-xs font-bold font-mono bg-transparent outline-none text-[#1D3A30]"
-                                />
+                                <div className="flex items-center px-1">
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    placeholder="22.5"
+                                    value={metersInputStr}
+                                    onChange={(e) => handleMetersInputChange(e.target.value)}
+                                    onBlur={() => {
+                                      const p = parseFloat(metersInputStr);
+                                      if (!isNaN(p) && p > 0) {
+                                        const clean = Math.round(p * 10) / 10;
+                                        setSelectedMeters(clean);
+                                        setMetersInputStr(String(clean));
+                                      } else {
+                                        setSelectedMeters(1);
+                                        setMetersInputStr('1');
+                                        handleChangeMeters(1);
+                                      }
+                                    }}
+                                    className="w-16 text-center text-xs font-extrabold font-mono bg-transparent outline-none text-[#1D3A30] py-1.5"
+                                  />
+                                  <span className="text-[10px] text-[#A99872] font-bold px-1">متر</span>
+                                </div>
                                 <button
                                   type="button"
                                   onClick={() => handleChangeMeters(selectedMeters + 0.5)}
-                                  className="p-2 hover:bg-[#C7B895]/20 text-[#1D3A30] transition active:scale-95"
-                                  title="زيادة نصف متر"
+                                  className="px-2.5 py-2 hover:bg-[#C7B895]/20 text-[#1D3A30] transition active:scale-95"
+                                  title="زيادة نصف متر (+0.5)"
                                 >
                                   <Plus className="w-3.5 h-3.5" />
                                 </button>
                               </div>
 
-                              {/* Quick Meter Chips */}
+                              {/* Quick Meter Chips with fractions like 3.5 & 22.5 */}
                               <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-                                {[1, 2, 3, 3.5, 4, 5].map((m) => (
+                                {[1, 2, 3, 3.5, 4, 5, 10, 22.5].map((m) => (
                                   <button
                                     key={m}
                                     type="button"
                                     onClick={() => handleChangeMeters(m)}
                                     className={cn(
-                                      "px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition",
+                                      "px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition shrink-0",
                                       selectedMeters === m
-                                        ? "bg-[#1D3A30] text-[#FAF7F0]"
+                                        ? "bg-[#1D3A30] text-[#FAF7F0] shadow-xs"
                                         : "bg-[#FAF7F0] text-[#1D3A30] border border-[#C7B895]/30 hover:bg-[#C7B895]/20"
                                     )}
                                   >

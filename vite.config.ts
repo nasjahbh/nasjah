@@ -11,6 +11,11 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        workbox: {
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+        },
         includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'nasjah-logo.jpeg', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
           id: '/',

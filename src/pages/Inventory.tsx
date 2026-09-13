@@ -91,11 +91,14 @@ export default function Inventory() {
     e.preventDefault();
     if (!newFabric.name) return;
     
+    const qtyNum = parseFloat(String(newFabric.quantity));
+    const priceNum = parseFloat(String(newFabric.price));
+
     const fabricItem: Fabric = {
       id: Date.now().toString(),
       name: newFabric.name.trim(),
-      quantity: Number(newFabric.quantity) || 0,
-      price: Number(newFabric.price) || 0,
+      quantity: !isNaN(qtyNum) ? Math.round(qtyNum * 10) / 10 : 0,
+      price: !isNaN(priceNum) ? Math.round(priceNum * 100) / 100 : 0,
       imageUrl: newFabric.imageUrl || undefined
     };
 
@@ -109,7 +112,7 @@ export default function Inventory() {
   const handleUpdateQuantity = (id: string, delta: number) => {
     const updated = inventory.map(item => {
       if (item.id === id) {
-        const newQty = Math.max(0, item.quantity + delta);
+        const newQty = Math.max(0, Math.round(((Number(item.quantity) || 0) + delta) * 10) / 10);
         return { ...item, quantity: newQty };
       }
       return item;
@@ -117,11 +120,25 @@ export default function Inventory() {
     saveInventory(updated);
   };
 
+  const handleSetExactQuantity = (id: string) => {
+    const item = inventory.find(i => i.id === id);
+    if (!item) return;
+    const input = window.prompt(`تعديل أمتار قماش "${item.name}" (يمكن كتابة كسور مثل 22.5):`, String(item.quantity));
+    if (input !== null) {
+      const parsed = parseFloat(input.trim());
+      if (!isNaN(parsed) && parsed >= 0) {
+        const clean = Math.round(parsed * 10) / 10;
+        const updated = inventory.map(it => it.id === id ? { ...it, quantity: clean } : it);
+        saveInventory(updated);
+      }
+    }
+  };
+
   const filteredInventory = inventory.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const totalMeters = inventory.reduce((acc, f) => acc + (Number(f.quantity) || 0), 0);
+  const totalMeters = Math.round(inventory.reduce((acc, f) => acc + (Number(f.quantity) || 0), 0) * 10) / 10;
   const lowStockCount = inventory.filter(f => (Number(f.quantity) || 0) <= 2).length;
 
   return (
@@ -235,25 +252,46 @@ export default function Inventory() {
                     {item.price} د.ب <span className="text-[9px] font-normal text-[#1D3A30]/60">/ للمتر</span>
                   </p>
 
-                  {/* Quantity Stepper */}
+                  {/* Quantity Stepper with ±0.5 support */}
                   <div className="flex items-center justify-between mt-2 pt-1 border-t border-[#C7B895]/20">
                     <span className="text-[10px] text-[#1D3A30]/70 font-medium">الكمية المتوفرة:</span>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleUpdateQuantity(item.id, -0.5)}
+                        disabled={item.quantity <= 0}
+                        className="px-1.5 py-0.5 bg-[#FAF7F0] hover:bg-[#E8D5A8]/50 text-[#1D3A30] border border-[#C7B895]/30 rounded-md text-[9px] font-bold disabled:opacity-30 transition active:scale-95"
+                        title="إنقاص نصف متر (-0.5)"
+                      >
+                        -0.5
+                      </button>
                       <button
                         onClick={() => handleUpdateQuantity(item.id, -1)}
                         disabled={item.quantity <= 0}
-                        className="w-6.5 h-6.5 bg-[#FAF7F0] hover:bg-[#E8D5A8]/50 text-[#1D3A30] border border-[#C7B895]/30 rounded-lg flex items-center justify-center font-bold disabled:opacity-30 transition active:scale-95"
+                        className="w-5.5 h-5.5 bg-[#FAF7F0] hover:bg-[#E8D5A8]/50 text-[#1D3A30] border border-[#C7B895]/30 rounded-md flex items-center justify-center font-bold disabled:opacity-30 transition active:scale-95"
+                        title="إنقاص متر كامل (-1)"
                       >
-                        <Minus className="w-3 h-3" />
+                        <Minus className="w-2.5 h-2.5" />
                       </button>
-                      <span className={`text-xs font-bold font-mono min-w-[28px] text-center ${isLow ? 'text-amber-800' : 'text-[#1D3A30]'}`}>
+                      <button
+                        onClick={() => handleSetExactQuantity(item.id)}
+                        className={`text-xs font-extrabold font-mono px-1 py-0.5 rounded hover:bg-[#C7B895]/20 transition ${isLow ? 'text-amber-800' : 'text-[#1D3A30]'}`}
+                        title="انقر لتعديل الأمتار مباشرة (مثل 22.5)"
+                      >
                         {item.quantity} م
-                      </span>
+                      </button>
                       <button
                         onClick={() => handleUpdateQuantity(item.id, 1)}
-                        className="w-6.5 h-6.5 bg-[#FAF7F0] hover:bg-[#E8D5A8]/50 text-[#1D3A30] border border-[#C7B895]/30 rounded-lg flex items-center justify-center font-bold transition active:scale-95"
+                        className="w-5.5 h-5.5 bg-[#FAF7F0] hover:bg-[#E8D5A8]/50 text-[#1D3A30] border border-[#C7B895]/30 rounded-md flex items-center justify-center font-bold transition active:scale-95"
+                        title="زيادة متر كامل (+1)"
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-2.5 h-2.5" />
+                      </button>
+                      <button
+                        onClick={() => handleUpdateQuantity(item.id, 0.5)}
+                        className="px-1.5 py-0.5 bg-[#FAF7F0] hover:bg-[#E8D5A8]/50 text-[#1D3A30] border border-[#C7B895]/30 rounded-md text-[9px] font-bold transition active:scale-95"
+                        title="زيادة نصف متر (+0.5)"
+                      >
+                        +0.5
                       </button>
                     </div>
                   </div>
@@ -314,14 +352,16 @@ export default function Inventory() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
-                      الكمية بالمتر *
+                      الكمية بالمتر (يقبل كسور النصف مثل 22.5) *
                     </label>
                     <input
                       type="number"
+                      step="0.1"
                       required
                       min="0"
+                      placeholder="مثال: 22.5"
                       value={newFabric.quantity}
-                      onChange={(e) => setNewFabric({ ...newFabric, quantity: Number(e.target.value) })}
+                      onChange={(e) => setNewFabric({ ...newFabric, quantity: e.target.value })}
                       className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs font-bold font-mono text-[#1D3A30]"
                     />
                   </div>
