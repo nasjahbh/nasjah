@@ -164,22 +164,14 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="mt-2.5 pt-2 sm:pt-2.5 border-t border-[#C7B895]/20 flex justify-around text-xs">
-          <div>
+        <div className="mt-2.5 pt-2 sm:pt-2.5 border-t border-[#C7B895]/20 grid grid-cols-2 divide-x divide-x-reverse divide-[#C7B895]/20 text-xs text-center">
+          <div className="px-2">
             <span className="text-[10px] sm:text-[11px] text-[#C7B895] block mb-0.5">المبيعات الكلية</span>
             <span className="font-bold text-[#E8D5A8] font-mono text-xs sm:text-sm">+{sales.toFixed(2)} د.ب</span>
           </div>
-          <div className="w-px bg-[#C7B895]/20" />
-          <div>
+          <div className="px-2">
             <span className="text-[10px] sm:text-[11px] text-[#C7B895] block mb-0.5">إجمالي المصروفات</span>
             <span className="font-bold text-rose-300 font-mono text-xs sm:text-sm">-{expenses.toFixed(2)} د.ب</span>
-          </div>
-          <div className="w-px bg-[#C7B895]/20" />
-          <div>
-            <span className="text-[10px] sm:text-[11px] text-[#C7B895] block mb-0.5">حالة الطلبات</span>
-            <span className="font-bold text-[#E8D5A8] font-mono text-xs sm:text-sm">
-              {pendingOrders.length} قيد التجهيز
-            </span>
           </div>
         </div>
       </motion.div>
