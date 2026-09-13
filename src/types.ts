@@ -24,6 +24,9 @@ export interface Order {
   deliveryMethod?: string;
   notes?: string;
   createdAt: number; // timestamp in ms
+  fabricId?: string;
+  fabricMeters?: number;
+  fabricName?: string;
 }
 
 export interface Expense {

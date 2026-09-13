@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, FileText, Phone, Trash2, CheckCircle2, Clock, Search, 
   MessageSquare, Eye, X, Printer, Download, Edit3, Calendar, 
-  CreditCard, AlertTriangle, Filter, RotateCcw, ChevronDown
+  CreditCard, AlertTriangle, Filter, RotateCcw, ChevronDown,
+  Ruler, Layers, Minus, Sparkles, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -11,7 +12,15 @@ import { Fabric, Order, OrderStatus, PaymentMethod } from '../types';
 import { formatDateTime, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
 import NasjahLogo from '../components/NasjahLogo';
 import WhatsAppIcon from '../components/WhatsAppIcon';
-import { persistOrders, deleteOrderPermanently, getLocalData, syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
+import { 
+  persistOrders, 
+  deleteOrderPermanently, 
+  persistInventory,
+  getLocalData, 
+  syncWithServer, 
+  EVENT_DATA_UPDATED 
+} from '../lib/dataService';
+import { cn } from '../lib/utils';
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -20,6 +29,12 @@ export default function Orders() {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   
+  // Fabric selection in modal
+  const [selectedFabricId, setSelectedFabricId] = useState<string | null>(null);
+  const [selectedMeters, setSelectedMeters] = useState<number>(1);
+  const [customFabricMode, setCustomFabricMode] = useState<boolean>(false);
+  const [stockError, setStockError] = useState<string | null>(null);
+
   // Deletion modal state
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
 
@@ -71,6 +86,10 @@ export default function Orders() {
   const openCreateModal = () => {
     setModalMode('create');
     setEditingOrderId(null);
+    setSelectedFabricId(null);
+    setSelectedMeters(1);
+    setCustomFabricMode(false);
+    setStockError(null);
     setOrderForm({
       customerName: '',
       phone: '',
@@ -87,6 +106,18 @@ export default function Orders() {
   const openEditModal = (order: Order) => {
     setModalMode('edit');
     setEditingOrderId(order.id);
+    setStockError(null);
+
+    if (order.fabricId) {
+      setSelectedFabricId(order.fabricId);
+      setSelectedMeters(order.fabricMeters || 1);
+      setCustomFabricMode(false);
+    } else {
+      setSelectedFabricId(null);
+      setSelectedMeters(1);
+      setCustomFabricMode(true);
+    }
+
     setOrderForm({
       customerName: order.customerName,
       phone: order.phone,
@@ -100,46 +131,203 @@ export default function Orders() {
     setShowModal(true);
   };
 
-  const handleSaveOrder = (e: React.FormEvent) => {
+  // Handle fabric selection in the horizontal card list
+  const handleSelectFabric = (fabric: Fabric) => {
+    const isAlreadySelected = selectedFabricId === fabric.id;
+    if (isAlreadySelected) {
+      // Keep selected or refresh
+      setSelectedFabricId(fabric.id);
+    } else {
+      setSelectedFabricId(fabric.id);
+    }
+    setCustomFabricMode(false);
+    setStockError(null);
+
+    const meters = selectedMeters > 0 ? selectedMeters : 1;
+    const detailsText = `قماش ${fabric.name} (${meters} متر)`;
+    
+    // Auto-calculate suggested price if fabric has price
+    const suggestedPrice = fabric.price > 0 ? (fabric.price * meters).toFixed(2) : orderForm.price;
+
+    setOrderForm(prev => ({
+      ...prev,
+      details: detailsText,
+      price: suggestedPrice || prev.price
+    }));
+
+    // Check stock immediately
+    if ((Number(fabric.quantity) || 0) <= 0) {
+      setStockError(`تنبيه: قماش "${fabric.name}" نفد من المخزون تماماً (0 متر متوفر). لا يمكن إتمام الطلب.`);
+    } else if (meters > fabric.quantity) {
+      setStockError(`تنبيه: الأمتار المطلوبة (${meters} م) تتجاوز الكمية المتوفرة بالمخزون (${fabric.quantity} م فقط).`);
+    }
+  };
+
+  // Handle changing meters
+  const handleChangeMeters = (newMeters: number) => {
+    const cleanMeters = Math.round(Math.max(0.1, newMeters) * 10) / 10;
+    setSelectedMeters(cleanMeters);
+
+    const fabric = fabrics.find(f => f.id === selectedFabricId);
+    if (fabric) {
+      const detailsText = `قماش ${fabric.name} (${cleanMeters} متر)`;
+      const suggestedPrice = fabric.price > 0 ? (fabric.price * cleanMeters).toFixed(2) : orderForm.price;
+
+      setOrderForm(prev => ({
+        ...prev,
+        details: detailsText,
+        price: suggestedPrice || prev.price
+      }));
+
+      // Stock validation
+      if ((Number(fabric.quantity) || 0) <= 0) {
+        setStockError(`تنبيه: قماش "${fabric.name}" نفد من المخزون تماماً.`);
+      } else if (cleanMeters > fabric.quantity) {
+        setStockError(`عذراً، الأمتار المطلوبة (${cleanMeters} م) غير متوفرة. المتوفر حالياً بالمخزون هو ${fabric.quantity} متر فقط.`);
+      } else {
+        setStockError(null);
+      }
+    }
+  };
+
+  const handleSaveOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orderForm.customerName || !orderForm.price || !orderForm.details) return;
+    setStockError(null);
+
+    if (!orderForm.customerName.trim()) {
+      setStockError('يرجى كتابة اسم العميل.');
+      return;
+    }
 
     const priceNum = parseFloat(orderForm.price);
+    if (isNaN(priceNum) || priceNum < 0) {
+      setStockError('يرجى إدخال مبلغ إجمالي صحيح.');
+      return;
+    }
+
+    const chosenFabric = fabrics.find(f => f.id === selectedFabricId);
+
+    // CRITICAL: Strict stock verification if choosing a fabric from inventory
+    if (!customFabricMode && selectedFabricId && chosenFabric) {
+      const availableQty = Number(chosenFabric.quantity) || 0;
+
+      if (modalMode === 'create') {
+        if (availableQty <= 0) {
+          setStockError(`عذراً، لا يمكن إتمام الطلب: قماش "${chosenFabric.name}" نفد من المخزون (0 متر متوفر).`);
+          return;
+        }
+        if (selectedMeters > availableQty) {
+          setStockError(`عذراً، لا يمكن إتمام الطلب: الأمتار المطلوبة (${selectedMeters} م) أكبر من المتوفر بالمخزون (${availableQty} م فقط).`);
+          return;
+        }
+        if (selectedMeters <= 0) {
+          setStockError('يرجى إدخال عدد أمتار صحيح أكبر من الصفر.');
+          return;
+        }
+      } else if (modalMode === 'edit') {
+        // In edit mode, take into account already reserved meters
+        const prevOrder = orders.find(o => o.id === editingOrderId);
+        const prevMeters = (prevOrder?.fabricId === selectedFabricId) ? (prevOrder.fabricMeters || 0) : 0;
+        const totalEffective = availableQty + prevMeters;
+
+        if (selectedMeters > totalEffective) {
+          setStockError(`عذراً، لا يمكن إتمام التعديل: الأمتار المطلوبة (${selectedMeters} م) تتجاوز الكمية المتوفرة (${totalEffective} م).`);
+          return;
+        }
+      }
+    } else if (!customFabricMode && fabrics.length > 0 && !selectedFabricId) {
+      setStockError('يرجى الضغط على أحد الأقمشة من القائمة الأفقية لاختياره.');
+      return;
+    }
+
+    if (!orderForm.details.trim()) {
+      setStockError('يرجى تحديد القماش أو كتابة تفاصيل الطلب.');
+      return;
+    }
+
     const createdAtMs = fromDatetimeLocal(orderForm.datetimeStr);
 
+    // STEP 1: Deduct meters from inventory
+    if (!customFabricMode && selectedFabricId && chosenFabric) {
+      let updatedFabrics = [...fabrics];
+
+      if (modalMode === 'create') {
+        updatedFabrics = updatedFabrics.map(f => {
+          if (f.id === selectedFabricId) {
+            const newQty = Math.max(0, (Number(f.quantity) || 0) - selectedMeters);
+            return { ...f, quantity: Math.round(newQty * 10) / 10 };
+          }
+          return f;
+        });
+      } else if (modalMode === 'edit') {
+        const prevOrder = orders.find(o => o.id === editingOrderId);
+        // If order had a previous fabric, restore its meters first
+        if (prevOrder?.fabricId) {
+          updatedFabrics = updatedFabrics.map(f => {
+            if (f.id === prevOrder.fabricId) {
+              const restored = (Number(f.quantity) || 0) + (prevOrder.fabricMeters || 0);
+              return { ...f, quantity: Math.round(restored * 10) / 10 };
+            }
+            return f;
+          });
+        }
+        // Deduct new meters
+        updatedFabrics = updatedFabrics.map(f => {
+          if (f.id === selectedFabricId) {
+            const newQty = Math.max(0, (Number(f.quantity) || 0) - selectedMeters);
+            return { ...f, quantity: Math.round(newQty * 10) / 10 };
+          }
+          return f;
+        });
+      }
+
+      setFabrics(updatedFabrics);
+      persistInventory(updatedFabrics).catch(() => {});
+    }
+
+    // STEP 2: Save order
+    const finalDetails = orderForm.details.trim();
+    const finalFabricId = !customFabricMode && selectedFabricId ? selectedFabricId : undefined;
+    const finalFabricMeters = !customFabricMode && selectedFabricId ? selectedMeters : undefined;
+    const finalFabricName = !customFabricMode && chosenFabric ? chosenFabric.name : undefined;
+
     if (modalMode === 'edit' && editingOrderId) {
-      // Update existing order
       const updatedOrders = orders.map(o => {
         if (o.id === editingOrderId) {
           return {
             ...o,
             customerName: orderForm.customerName.trim(),
             phone: orderForm.phone.trim(),
-            details: orderForm.details.trim(),
+            details: finalDetails,
             price: priceNum,
             total: priceNum,
             status: orderForm.status,
             paymentMethod: orderForm.paymentMethod,
             notes: orderForm.notes.trim(),
-            createdAt: createdAtMs
+            createdAt: createdAtMs,
+            fabricId: finalFabricId,
+            fabricMeters: finalFabricMeters,
+            fabricName: finalFabricName
           };
         }
         return o;
       });
       saveOrders(updatedOrders);
     } else {
-      // Create new order
       const newOrderData: Order = {
         id: Math.random().toString(36).substring(2, 8).toUpperCase(),
         customerName: orderForm.customerName.trim(),
         phone: orderForm.phone.trim(),
-        details: orderForm.details.trim(),
+        details: finalDetails,
         price: priceNum,
         total: priceNum,
         status: orderForm.status,
         paymentMethod: orderForm.paymentMethod,
         notes: orderForm.notes.trim(),
-        createdAt: createdAtMs
+        createdAt: createdAtMs,
+        fabricId: finalFabricId,
+        fabricMeters: finalFabricMeters,
+        fabricName: finalFabricName
       };
       const updatedOrders = [newOrderData, ...orders];
       saveOrders(updatedOrders);
@@ -152,6 +340,20 @@ export default function Orders() {
   const confirmDeleteOrder = async () => {
     if (!orderToDelete) return;
     const orderId = orderToDelete.id;
+
+    // Restore fabric inventory meters if this order had deducted meters
+    if (orderToDelete.fabricId && orderToDelete.fabricMeters) {
+      const restoredFabrics = fabrics.map(f => {
+        if (f.id === orderToDelete.fabricId) {
+          const restored = (Number(f.quantity) || 0) + (orderToDelete.fabricMeters || 0);
+          return { ...f, quantity: Math.round(restored * 10) / 10 };
+        }
+        return f;
+      });
+      setFabrics(restoredFabrics);
+      persistInventory(restoredFabrics).catch(() => {});
+    }
+
     setOrderToDelete(null);
     if (selectedInvoice?.id === orderId) {
       setSelectedInvoice(null);
@@ -576,18 +778,259 @@ export default function Orders() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
-                    تفاصيل الطلب / الأقمشة *
-                  </label>
-                  <textarea
-                    required
-                    rows={2}
-                    placeholder="مثال: 5 متر قماش حرير طبيعي أسود مع تطريز خفيف..."
-                    value={orderForm.details}
-                    onChange={(e) => setOrderForm({ ...orderForm, details: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs text-[#1D3A30]"
-                  />
+                {/* Fabric Selection or Manual Entry */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-bold text-[#1D3A30]">
+                      تفاصيل الطلب / الأقمشة *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomFabricMode(!customFabricMode);
+                        setStockError(null);
+                      }}
+                      className="text-[10px] text-[#A99872] hover:text-[#1D3A30] font-bold underline transition"
+                    >
+                      {customFabricMode ? 'العودة لاختيار أقمشة المخزون' : 'كتابة تفاصيل يدوية'}
+                    </button>
+                  </div>
+
+                  {customFabricMode ? (
+                    <textarea
+                      required
+                      rows={2}
+                      placeholder="مثال: 5 متر قماش حرير طبيعي أسود مع تطريز خفيف..."
+                      value={orderForm.details}
+                      onChange={(e) => setOrderForm({ ...orderForm, details: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs text-[#1D3A30]"
+                    />
+                  ) : (
+                    <div className="space-y-2.5">
+                      {/* Horizontal scrollable box containing fabrics with images ("المستطيل") */}
+                      <div className="relative bg-[#FAF7F0] p-2.5 rounded-2xl border border-[#C7B895]/40">
+                        {fabrics.length === 0 ? (
+                          <div className="text-center py-5 px-3">
+                            <Layers className="w-8 h-8 text-[#C7B895] mx-auto mb-1.5 opacity-70" />
+                            <p className="text-xs font-bold text-[#1D3A30]">لا توجد أقمشة مسجلة في المخزون حالياً</p>
+                            <p className="text-[10px] text-[#A99872] mt-0.5">يمكنك إضافة أقمشة من قسم المخزون أو كتابة التفاصيل يدوياً</p>
+                            <button
+                              type="button"
+                              onClick={() => setCustomFabricMode(true)}
+                              className="mt-2 text-[11px] font-bold text-[#1D3A30] bg-white border border-[#C7B895]/40 px-3 py-1.5 rounded-xl hover:bg-[#FAF7F0] transition"
+                            >
+                              كتابة تفاصيل القماش يدوياً
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between px-1 mb-2 text-[10px] text-[#A99872]">
+                              <span className="font-medium">اضغط على أحد الأقمشة لاختياره (اسحب أفقياً):</span>
+                              <span className="font-bold font-mono">{fabrics.length} قماش مسجل</span>
+                            </div>
+
+                            {/* Horizontal scroll carousel */}
+                            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none snap-x">
+                              {fabrics.map((f) => {
+                                const isSelected = selectedFabricId === f.id;
+                                const qty = Number(f.quantity) || 0;
+                                const isOutOfStock = qty <= 0;
+                                const img = f.imageUrl || f.image;
+
+                                return (
+                                  <button
+                                    key={f.id}
+                                    type="button"
+                                    onClick={() => handleSelectFabric(f)}
+                                    className={cn(
+                                      "flex-shrink-0 w-28 p-2 rounded-xl text-right transition-all duration-200 relative snap-start flex flex-col items-center group",
+                                      isSelected
+                                        ? "bg-[#1D3A30] text-[#FAF7F0] ring-2 ring-[#C7B895] shadow-md border border-[#C7B895]"
+                                        : isOutOfStock
+                                        ? "bg-white/70 border border-red-200 opacity-60 hover:opacity-90"
+                                        : "bg-white border border-[#C7B895]/30 hover:border-[#1D3A30]/50 hover:shadow-xs"
+                                    )}
+                                  >
+                                    {/* Image Container */}
+                                    <div className="relative w-full h-20 rounded-lg overflow-hidden bg-stone-100 mb-1.5 flex items-center justify-center">
+                                      {img ? (
+                                        <img
+                                          src={img}
+                                          alt={f.name}
+                                          referrerPolicy="no-referrer"
+                                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex flex-col items-center justify-center text-[#A99872] bg-[#FAF7F0]">
+                                          <Layers className="w-6 h-6 opacity-60" />
+                                          <span className="text-[9px] mt-0.5 text-[#A99872]/80 font-bold">نَسْجَة</span>
+                                        </div>
+                                      )}
+
+                                      {/* Selection Indicator Badge */}
+                                      {isSelected && (
+                                        <div className="absolute top-1 right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-sm">
+                                          <Check className="w-3 h-3 stroke-[3]" />
+                                        </div>
+                                      )}
+
+                                      {/* Stock pill badge */}
+                                      <div className="absolute bottom-1 right-1 left-1">
+                                        <span className={cn(
+                                          "block text-center text-[9px] font-bold py-0.5 px-1 rounded backdrop-blur-xs font-mono",
+                                          isOutOfStock
+                                            ? "bg-red-500/90 text-white"
+                                            : isSelected
+                                            ? "bg-[#FAF7F0]/95 text-[#1D3A30]"
+                                            : "bg-[#1D3A30]/85 text-[#FAF7F0]"
+                                        )}>
+                                          {isOutOfStock ? 'نفد المخزون' : `${qty} م متوفر`}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Fabric Name */}
+                                    <p className={cn(
+                                      "font-bold text-[11px] leading-tight line-clamp-2 w-full text-center h-7 flex items-center justify-center",
+                                      isSelected ? "text-[#FAF7F0]" : "text-[#1D3A30]"
+                                    )}>
+                                      {f.name}
+                                    </p>
+
+                                    {/* Price per meter */}
+                                    <p className={cn(
+                                      "text-[10px] font-mono mt-1 font-bold",
+                                      isSelected ? "text-[#E8D5A8]" : "text-[#A99872]"
+                                    )}>
+                                      {f.price} د.ب / م
+                                    </p>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Meter Selection & Stock Availability Controls */}
+                      {selectedFabricId && (() => {
+                        const selectedFabric = fabrics.find(f => f.id === selectedFabricId);
+                        if (!selectedFabric) return null;
+                        const availableQty = Number(selectedFabric.quantity) || 0;
+                        const isInsufficient = selectedMeters > availableQty;
+                        const isOut = availableQty <= 0;
+
+                        return (
+                          <motion.div
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="p-3 bg-white rounded-2xl border border-[#C7B895]/40 space-y-2.5 shadow-xs"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <Ruler className="w-4 h-4 text-[#1D3A30]" />
+                                <span className="text-[11px] font-bold text-[#1D3A30]">
+                                  عدد الأمتار المطلوبة من قماش ({selectedFabric.name}):
+                                </span>
+                              </div>
+                              <span className="text-[11px] font-mono font-bold text-[#A99872]">
+                                المتوفر: {availableQty} م
+                              </span>
+                            </div>
+
+                            {/* Meter Stepper & Quick Pills */}
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center border border-[#C7B895]/40 rounded-xl overflow-hidden bg-[#FAF7F0]">
+                                <button
+                                  type="button"
+                                  onClick={() => handleChangeMeters(Math.max(0.5, selectedMeters - 0.5))}
+                                  className="p-2 hover:bg-[#C7B895]/20 text-[#1D3A30] transition active:scale-95"
+                                  title="إنقاص نصف متر"
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  min="0.1"
+                                  value={selectedMeters}
+                                  onChange={(e) => handleChangeMeters(parseFloat(e.target.value) || 0)}
+                                  className="w-16 text-center text-xs font-bold font-mono bg-transparent outline-none text-[#1D3A30]"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleChangeMeters(selectedMeters + 0.5)}
+                                  className="p-2 hover:bg-[#C7B895]/20 text-[#1D3A30] transition active:scale-95"
+                                  title="زيادة نصف متر"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              {/* Quick Meter Chips */}
+                              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+                                {[1, 2, 3, 3.5, 4, 5].map((m) => (
+                                  <button
+                                    key={m}
+                                    type="button"
+                                    onClick={() => handleChangeMeters(m)}
+                                    className={cn(
+                                      "px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition",
+                                      selectedMeters === m
+                                        ? "bg-[#1D3A30] text-[#FAF7F0]"
+                                        : "bg-[#FAF7F0] text-[#1D3A30] border border-[#C7B895]/30 hover:bg-[#C7B895]/20"
+                                    )}
+                                  >
+                                    {m}م
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Suggested Price Calculation Breakdown */}
+                            {selectedFabric.price > 0 && (
+                              <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-[#C7B895]/20 text-[#1D3A30]">
+                                <span>حساب المبلغ المقترح ({selectedFabric.price} د.ب × {selectedMeters} م):</span>
+                                <span className="font-mono font-bold text-[#1D3A30]">
+                                  {(selectedFabric.price * selectedMeters).toFixed(2)} د.ب
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Real-time Stock Verification Feedback */}
+                            {isOut ? (
+                              <div className="flex items-center gap-1.5 p-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-[11px] font-bold">
+                                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                                <span>عذراً، هذا القماش غير متوفر في المخزون (0 متر)! لا يمكن إتمام الطلب.</span>
+                              </div>
+                            ) : isInsufficient ? (
+                              <div className="flex items-center gap-1.5 p-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-[11px] font-bold">
+                                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                                <span>
+                                  الأمتار المطلوبة ({selectedMeters} م) أكبر من المتوفر ({availableQty} م فقط)! لا يمكن إتمام الطلب.
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-medium">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                                <span>
+                                  الأمتار متوفرة — سيتم خصم {selectedMeters} متر ويتبقى في المخزون {Math.round((availableQty - selectedMeters) * 10) / 10} متر.
+                                </span>
+                              </div>
+                            )}
+                          </motion.div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Prominent Stock Error Alert */}
+                  {stockError && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-red-50 border border-red-300 text-red-800 text-[11px] font-bold animate-pulse">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0 text-red-600" />
+                      <span>{stockError}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -650,12 +1093,32 @@ export default function Orders() {
                 </div>
 
                 <div className="pt-2">
-                  <button
-                    type="submit"
-                    className="w-full py-3 bg-[#1D3A30] text-[#E8D5A8] font-bold rounded-xl text-xs hover:bg-[#25493D] transition active:scale-98 shadow-sm border border-[#C7B895]/30"
-                  >
-                    {modalMode === 'edit' ? 'حفظ التعديلات' : 'حفظ الطلب وإصدار الفاتورة'}
-                  </button>
+                  {(() => {
+                    const chosen = fabrics.find(f => f.id === selectedFabricId);
+                    const isStockBlocking = Boolean(
+                      !customFabricMode && chosen && (
+                        (Number(chosen.quantity) || 0) <= 0 ||
+                        selectedMeters > (Number(chosen.quantity) || 0)
+                      )
+                    );
+
+                    return (
+                      <button
+                        type="submit"
+                        disabled={isStockBlocking}
+                        className={cn(
+                          "w-full py-3 font-bold rounded-xl text-xs transition active:scale-98 shadow-sm border",
+                          isStockBlocking
+                            ? "bg-red-100 text-red-700 border-red-300 cursor-not-allowed opacity-80"
+                            : "bg-[#1D3A30] text-[#E8D5A8] hover:bg-[#25493D] border-[#C7B895]/30"
+                        )}
+                      >
+                        {isStockBlocking 
+                          ? '⚠️ الأمتار غير متوفرة بالمخزون (لا يمكن إتمام الطلب)' 
+                          : (modalMode === 'edit' ? 'حفظ التعديلات' : 'حفظ الطلب وإصدار الفاتورة')}
+                      </button>
+                    );
+                  })()}
                 </div>
               </form>
             </motion.div>

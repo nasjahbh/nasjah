@@ -9,28 +9,48 @@ export interface StoreData {
   inventory: Fabric[];
 }
 
+// In-memory runtime store (ZERO localStorage persistence)
+let cloudStore: StoreData = {
+  orders: [],
+  expenses: [],
+  inventory: []
+};
+
 let isSyncing = false;
 let realtimeChannelSubscribed = false;
+let isInitialCloudLoadComplete = false;
+
+// Purge any legacy local storage keys from user's device
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('ordersData');
+    localStorage.removeItem('expensesData');
+    localStorage.removeItem('inventory');
+    localStorage.removeItem('insights_data');
+    localStorage.removeItem('insights_timestamp');
+  } catch {}
+}
 
 export function notifyDataChanged() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(EVENT_DATA_UPDATED));
-    window.dispatchEvent(new Event('storage'));
   }
 }
 
 /**
- * Loads current state from localStorage instantly for 0-latency UI rendering
+ * Returns in-memory state fetched purely from the cloud database
  */
-export function getLocalData(): StoreData {
-  try {
-    const orders: Order[] = JSON.parse(localStorage.getItem('ordersData') || '[]');
-    const expenses: Expense[] = JSON.parse(localStorage.getItem('expensesData') || '[]');
-    const inventory: Fabric[] = JSON.parse(localStorage.getItem('inventory') || '[]');
-    return { orders, expenses, inventory };
-  } catch {
-    return { orders: [], expenses: [], inventory: [] };
-  }
+export function getCloudData(): StoreData {
+  return cloudStore;
+}
+
+/**
+ * Backward compatibility alias pointing directly to getCloudData
+ */
+export const getLocalData = getCloudData;
+
+export function isCloudDataReady(): boolean {
+  return isInitialCloudLoadComplete;
 }
 
 /**
@@ -47,7 +67,7 @@ function sanitizeInventoryForMetadata(inventory: Fabric[]): Fabric[] {
 
 /**
  * Saves store data to both Supabase PostgreSQL tables and server API,
- * as well as lightweight user metadata.
+ * as well as lightweight user metadata in the cloud.
  */
 export async function syncToSupabase(data: StoreData): Promise<void> {
   if (!supabase) return;
@@ -79,7 +99,7 @@ export async function syncToSupabase(data: StoreData): Promise<void> {
         }));
         await supabase.from('orders').upsert(mappedOrders);
 
-        // Delete any orders from Supabase that were deleted locally
+        // Delete any orders from Supabase that were deleted
         const inClause = `(${orderIds.map(id => `"${id}"`).join(',')})`;
         await supabase.from('orders').delete().eq('user_id', userId).not('id', 'in', inClause);
       } else {
@@ -107,7 +127,7 @@ export async function syncToSupabase(data: StoreData): Promise<void> {
         }));
         await supabase.from('expenses').upsert(mappedExpenses);
 
-        // Delete any expenses from Supabase that were deleted locally
+        // Delete any expenses from Supabase that were deleted
         const inClause = `(${expenseIds.map(id => `"${id}"`).join(',')})`;
         await supabase.from('expenses').delete().eq('user_id', userId).not('id', 'in', inClause);
       } else {
@@ -134,7 +154,7 @@ export async function syncToSupabase(data: StoreData): Promise<void> {
         }));
         await supabase.from('inventory').upsert(mappedInventory);
 
-        // Delete any fabrics from Supabase that were deleted locally
+        // Delete any fabrics from Supabase that were deleted
         const inClause = `(${inventoryIds.map(id => `"${id}"`).join(',')})`;
         await supabase.from('inventory').delete().eq('user_id', userId).not('id', 'in', inClause);
       } else {
@@ -145,7 +165,7 @@ export async function syncToSupabase(data: StoreData): Promise<void> {
       console.warn('Inventory cloud sync note:', invErr);
     }
 
-    // 4. Safe user metadata fallback (lightweight data only)
+    // 4. Safe user metadata fallback in Supabase Auth cloud
     try {
       await supabase.auth.updateUser({
         data: {
@@ -195,22 +215,22 @@ export function setupRealtimeSubscription() {
 }
 
 /**
- * Fetches latest records from Supabase Cloud and/or server backend
+ * Fetches latest records purely from Supabase Cloud and/or cloud server backend.
+ * Zero local storage is touched.
  */
 export async function syncWithServer(): Promise<StoreData> {
-  if (isSyncing) return getLocalData();
+  if (isSyncing) return cloudStore;
   isSyncing = true;
 
   try {
     setupRealtimeSubscription();
 
-    const local = getLocalData();
     let cloudOrders: Order[] | null = null;
     let cloudExpenses: Expense[] | null = null;
     let cloudInventory: Fabric[] | null = null;
     let tablesQueriedSuccessfully = false;
 
-    // STEP 1: Attempt to load from Supabase directly
+    // STEP 1: Attempt to load from Supabase Cloud directly
     if (supabase) {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
@@ -272,27 +292,13 @@ export async function syncWithServer(): Promise<StoreData> {
             console.warn('Tables query note:', tableErr);
           }
 
-          // If tables returned empty arrays, but local has data from before table creation,
-          // migrate local data up to the newly created tables!
-          if (tablesQueriedSuccessfully) {
-            const hasLocalData = local.orders.length > 0 || local.expenses.length > 0 || local.inventory.length > 0;
-            const cloudIsEmpty = (cloudOrders?.length ?? 0) === 0 && (cloudExpenses?.length ?? 0) === 0 && (cloudInventory?.length ?? 0) === 0;
-
-            if (cloudIsEmpty && hasLocalData) {
-              await syncToSupabase(local);
-              cloudOrders = local.orders;
-              cloudExpenses = local.expenses;
-              cloudInventory = local.inventory;
-            }
-          }
-
-          // If tables were not queried (e.g. RLS or network issue), fallback to user metadata
-          if (!tablesQueriedSuccessfully) {
+          // If tables returned empty or errored, check user metadata in Supabase
+          if (!tablesQueriedSuccessfully || (cloudOrders?.length === 0 && cloudExpenses?.length === 0 && cloudInventory?.length === 0)) {
             const metaStore = session.user.user_metadata?.store_data;
             if (metaStore) {
-              if (!cloudOrders && Array.isArray(metaStore.orders)) cloudOrders = metaStore.orders;
-              if (!cloudExpenses && Array.isArray(metaStore.expenses)) cloudExpenses = metaStore.expenses;
-              if (!cloudInventory && Array.isArray(metaStore.inventory)) cloudInventory = metaStore.inventory;
+              if ((!cloudOrders || cloudOrders.length === 0) && Array.isArray(metaStore.orders)) cloudOrders = metaStore.orders;
+              if ((!cloudExpenses || cloudExpenses.length === 0) && Array.isArray(metaStore.expenses)) cloudExpenses = metaStore.expenses;
+              if ((!cloudInventory || cloudInventory.length === 0) && Array.isArray(metaStore.inventory)) cloudInventory = metaStore.inventory;
             }
           }
         }
@@ -301,8 +307,8 @@ export async function syncWithServer(): Promise<StoreData> {
       }
     }
 
-    // STEP 2: Fallback to Node server endpoint if cloud returned nothing
-    if (cloudOrders === null && cloudExpenses === null && cloudInventory === null) {
+    // STEP 2: Query Cloud server backend (/api/store-data)
+    if (cloudOrders === null || cloudExpenses === null || cloudInventory === null) {
       try {
         const res = await fetch('/api/store-data', {
           headers: { 'Accept': 'application/json' }
@@ -310,9 +316,15 @@ export async function syncWithServer(): Promise<StoreData> {
         if (res.ok) {
           const serverData = await res.json();
           if (serverData.success) {
-            if (Array.isArray(serverData.orders)) cloudOrders = serverData.orders;
-            if (Array.isArray(serverData.expenses)) cloudExpenses = serverData.expenses;
-            if (Array.isArray(serverData.inventory)) cloudInventory = serverData.inventory;
+            if ((!cloudOrders || cloudOrders.length === 0) && Array.isArray(serverData.orders) && serverData.orders.length > 0) {
+              cloudOrders = serverData.orders;
+            }
+            if ((!cloudExpenses || cloudExpenses.length === 0) && Array.isArray(serverData.expenses) && serverData.expenses.length > 0) {
+              cloudExpenses = serverData.expenses;
+            }
+            if ((!cloudInventory || cloudInventory.length === 0) && Array.isArray(serverData.inventory) && serverData.inventory.length > 0) {
+              cloudInventory = serverData.inventory;
+            }
           }
         }
       } catch {
@@ -320,40 +332,35 @@ export async function syncWithServer(): Promise<StoreData> {
       }
     }
 
-    // STEP 3: Apply latest state
-    const finalOrders = cloudOrders !== null ? cloudOrders : local.orders;
-    const finalExpenses = cloudExpenses !== null ? cloudExpenses : local.expenses;
-    const finalInventory = cloudInventory !== null ? cloudInventory : local.inventory;
+    // STEP 3: Apply latest state directly to in-memory cloudStore (ZERO localStorage)
+    cloudStore = {
+      orders: cloudOrders !== null ? cloudOrders : cloudStore.orders,
+      expenses: cloudExpenses !== null ? cloudExpenses : cloudStore.expenses,
+      inventory: cloudInventory !== null ? cloudInventory : cloudStore.inventory
+    };
+    isInitialCloudLoadComplete = true;
 
-    localStorage.setItem('ordersData', JSON.stringify(finalOrders));
-    localStorage.setItem('expensesData', JSON.stringify(finalExpenses));
-    localStorage.setItem('inventory', JSON.stringify(finalInventory));
     notifyDataChanged();
-
-    return { orders: finalOrders, expenses: finalExpenses, inventory: finalInventory };
+    return cloudStore;
   } catch (err) {
-    console.warn('Data sync fallback:', err);
-    return getLocalData();
+    console.warn('Cloud data sync fallback:', err);
+    return cloudStore;
   } finally {
     isSyncing = false;
   }
 }
 
 /**
- * Persists orders across Supabase cloud, backend server, and local cache
+ * Persists orders purely to cloud databases (Supabase Cloud and Cloud Server API)
  */
 export async function persistOrders(orders: Order[]): Promise<void> {
-  localStorage.setItem('ordersData', JSON.stringify(orders));
-  localStorage.removeItem('insights_timestamp');
+  cloudStore.orders = orders;
   notifyDataChanged();
 
-  const current = getLocalData();
-  current.orders = orders;
-
   // 1. Sync to Supabase Cloud
-  syncToSupabase(current).catch(() => {});
+  syncToSupabase(cloudStore).catch(() => {});
 
-  // 2. Sync to Node Backend
+  // 2. Sync to Cloud Backend
   try {
     await fetch('/api/sync', {
       method: 'POST',
@@ -366,14 +373,11 @@ export async function persistOrders(orders: Order[]): Promise<void> {
 }
 
 /**
- * Permanently deletes a single order across Supabase, Backend, and Local cache
+ * Permanently deletes a single order across cloud databases
  */
 export async function deleteOrderPermanently(orderId: string): Promise<Order[]> {
-  const current = getLocalData();
-  const updatedOrders = current.orders.filter(o => o.id !== orderId);
-  
-  localStorage.setItem('ordersData', JSON.stringify(updatedOrders));
-  localStorage.removeItem('insights_timestamp');
+  const updatedOrders = cloudStore.orders.filter(o => o.id !== orderId);
+  cloudStore.orders = updatedOrders;
   notifyDataChanged();
 
   // 1. Direct delete from Supabase table
@@ -391,33 +395,28 @@ export async function deleteOrderPermanently(orderId: string): Promise<Order[]> 
     }
   }
 
-  // 2. Direct delete from Node server
+  // 2. Direct delete from Cloud server
   try {
     await fetch(`/api/orders/${encodeURIComponent(orderId)}`, { method: 'DELETE' });
   } catch {}
 
   // 3. Update full sync to keep user metadata in sync
-  current.orders = updatedOrders;
-  syncToSupabase(current).catch(() => {});
+  syncToSupabase(cloudStore).catch(() => {});
 
   return updatedOrders;
 }
 
 /**
- * Persists expenses across Supabase cloud, backend server, and local cache
+ * Persists expenses purely to cloud databases (Supabase Cloud and Cloud Server API)
  */
 export async function persistExpenses(expenses: Expense[]): Promise<void> {
-  localStorage.setItem('expensesData', JSON.stringify(expenses));
-  localStorage.removeItem('insights_timestamp');
+  cloudStore.expenses = expenses;
   notifyDataChanged();
 
-  const current = getLocalData();
-  current.expenses = expenses;
-
   // 1. Sync to Supabase Cloud
-  syncToSupabase(current).catch(() => {});
+  syncToSupabase(cloudStore).catch(() => {});
 
-  // 2. Sync to Node Backend
+  // 2. Sync to Cloud Backend
   try {
     await fetch('/api/sync', {
       method: 'POST',
@@ -430,14 +429,11 @@ export async function persistExpenses(expenses: Expense[]): Promise<void> {
 }
 
 /**
- * Permanently deletes a single expense across Supabase, Backend, and Local cache
+ * Permanently deletes a single expense across cloud databases
  */
 export async function deleteExpensePermanently(expenseId: string): Promise<Expense[]> {
-  const current = getLocalData();
-  const updatedExpenses = current.expenses.filter(e => e.id !== expenseId);
-
-  localStorage.setItem('expensesData', JSON.stringify(updatedExpenses));
-  localStorage.removeItem('insights_timestamp');
+  const updatedExpenses = cloudStore.expenses.filter(e => e.id !== expenseId);
+  cloudStore.expenses = updatedExpenses;
   notifyDataChanged();
 
   // 1. Direct delete from Supabase table
@@ -455,32 +451,28 @@ export async function deleteExpensePermanently(expenseId: string): Promise<Expen
     }
   }
 
-  // 2. Direct delete from Node server
+  // 2. Direct delete from Cloud server
   try {
     await fetch(`/api/expenses/${encodeURIComponent(expenseId)}`, { method: 'DELETE' });
   } catch {}
 
   // 3. Update full sync to keep user metadata in sync
-  current.expenses = updatedExpenses;
-  syncToSupabase(current).catch(() => {});
+  syncToSupabase(cloudStore).catch(() => {});
 
   return updatedExpenses;
 }
 
 /**
- * Persists inventory fabrics across Supabase cloud, backend server, and local cache
+ * Persists inventory fabrics purely to cloud databases (Supabase Cloud and Cloud Server API)
  */
 export async function persistInventory(inventory: Fabric[]): Promise<void> {
-  localStorage.setItem('inventory', JSON.stringify(inventory));
+  cloudStore.inventory = inventory;
   notifyDataChanged();
 
-  const current = getLocalData();
-  current.inventory = inventory;
-
   // 1. Sync to Supabase Cloud
-  syncToSupabase(current).catch(() => {});
+  syncToSupabase(cloudStore).catch(() => {});
 
-  // 2. Sync to Node Backend
+  // 2. Sync to Cloud Backend
   try {
     await fetch('/api/sync', {
       method: 'POST',
@@ -493,13 +485,11 @@ export async function persistInventory(inventory: Fabric[]): Promise<void> {
 }
 
 /**
- * Permanently deletes a single fabric item across Supabase, Backend, and Local cache
+ * Permanently deletes a single fabric item across cloud databases
  */
 export async function deleteFabricPermanently(fabricId: string): Promise<Fabric[]> {
-  const current = getLocalData();
-  const updatedInventory = current.inventory.filter(f => f.id !== fabricId);
-
-  localStorage.setItem('inventory', JSON.stringify(updatedInventory));
+  const updatedInventory = cloudStore.inventory.filter(f => f.id !== fabricId);
+  cloudStore.inventory = updatedInventory;
   notifyDataChanged();
 
   // 1. Direct delete from Supabase table
@@ -517,31 +507,24 @@ export async function deleteFabricPermanently(fabricId: string): Promise<Fabric[
     }
   }
 
-  // 2. Direct delete from Node server
+  // 2. Direct delete from Cloud server
   try {
     await fetch(`/api/inventory/${encodeURIComponent(fabricId)}`, { method: 'DELETE' });
   } catch {}
 
   // 3. Update full sync to keep user metadata in sync
-  current.inventory = updatedInventory;
-  syncToSupabase(current).catch(() => {});
+  syncToSupabase(cloudStore).catch(() => {});
 
   return updatedInventory;
 }
 
 /**
- * Resets data both on cloud databases and locally
+ * Resets data purely on cloud databases
  */
 export async function resetDatabase(): Promise<void> {
-  localStorage.removeItem('ordersData');
-  localStorage.removeItem('expensesData');
-  localStorage.removeItem('insights_timestamp');
-  localStorage.removeItem('insights_data');
+  cloudStore.orders = [];
+  cloudStore.expenses = [];
   notifyDataChanged();
-
-  const current = getLocalData();
-  current.orders = [];
-  current.expenses = [];
 
   // Reset in Supabase
   if (supabase) {
@@ -562,7 +545,7 @@ export async function resetDatabase(): Promise<void> {
     } catch {}
   }
 
-  syncToSupabase(current).catch(() => {});
+  syncToSupabase(cloudStore).catch(() => {});
 
   try {
     await fetch('/api/reset-data', { method: 'POST' });

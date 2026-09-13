@@ -21,7 +21,7 @@ export default function Setup() {
         
         <div className="bg-emerald-50/70 text-emerald-900 p-3 rounded-2xl border border-emerald-900/10 space-y-2 text-[11px] leading-relaxed">
           <p>
-            يعمل التطبيق الآن بكامل ميزاته فوراً على جهازك ويحفظ البيانات محلياً. لمزامنة البيانات سحابياً بين الهواتف:
+            يعمل التطبيق بنظام التخزين السحابي الكامل 100% دون أي اعتماد على التخزين المحلي، حيث تُحفظ وتُزامن الطلبات والمصاريف والمخزون سحابياً ومباشرة عبر خوادم Supabase:
           </p>
           <ol className="list-decimal list-inside space-y-1.5 text-emerald-800/80">
             <li>أنشئ مشروعاً مجانياً على <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-emerald-700 underline font-bold">Supabase.com</a></li>
