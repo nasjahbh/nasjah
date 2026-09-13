@@ -42,7 +42,9 @@ export default function Orders() {
   // Search and filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'month'>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [showDateFilter, setShowDateFilter] = useState<boolean>(false);
 
   // Selected Invoice for preview
   const [selectedInvoice, setSelectedInvoice] = useState<Order | null>(null);
@@ -458,11 +460,7 @@ export default function Orders() {
     doc.save(`فاتورة_${order.customerName}_${order.id}.pdf`);
   };
 
-  // Filter logic
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-
+  // Filter logic with custom date range
   const filteredOrders = orders.filter(o => {
     const q = searchQuery.toLowerCase();
     const matchesSearch = (
@@ -478,11 +476,14 @@ export default function Orders() {
       return false;
     }
 
-    if (timeFilter === 'today' && o.createdAt < startOfToday) {
-      return false;
+    if (startDate) {
+      const startTimestamp = new Date(startDate).setHours(0, 0, 0, 0);
+      if (o.createdAt < startTimestamp) return false;
     }
-    if (timeFilter === 'month' && o.createdAt < startOfMonth) {
-      return false;
+
+    if (endDate) {
+      const endTimestamp = new Date(endDate).setHours(23, 59, 59, 999);
+      if (o.createdAt > endTimestamp) return false;
     }
 
     return true;
@@ -490,6 +491,7 @@ export default function Orders() {
 
   const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.total || o.price) || 0), 0);
   const pendingCount = orders.filter(o => o.status === 'قيد التجهيز' || !o.status).length;
+  const isDateFiltered = Boolean(startDate || endDate);
 
   return (
     <div className="space-y-3.5 pb-6">
@@ -536,7 +538,7 @@ export default function Orders() {
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
           <button
             onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${
               statusFilter === 'all'
                 ? 'bg-[#1D3A30] text-[#E8D5A8] shadow-xs'
                 : 'bg-white text-[#1D3A30]/80 border border-[#C7B895]/30 hover:bg-[#FAF7F0]'
@@ -546,7 +548,7 @@ export default function Orders() {
           </button>
           <button
             onClick={() => setStatusFilter('قيد التجهيز')}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition flex items-center gap-1 ${
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition flex items-center gap-1 cursor-pointer ${
               statusFilter === 'قيد التجهيز'
                 ? 'bg-[#A99872] text-[#FAF7F0] shadow-xs'
                 : 'bg-white text-[#A99872] border border-[#C7B895]/50 hover:bg-[#FAF7F0]'
@@ -556,7 +558,7 @@ export default function Orders() {
           </button>
           <button
             onClick={() => setStatusFilter('تم التسليم')}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${
               statusFilter === 'تم التسليم'
                 ? 'bg-[#1D3A30] text-[#E8D5A8] shadow-xs'
                 : 'bg-white text-[#1D3A30] border border-[#1D3A30]/30 hover:bg-[#FAF7F0]'
@@ -564,27 +566,111 @@ export default function Orders() {
           >
             تم التسليم ({orders.length - pendingCount})
           </button>
+
+          {/* Date Range Toggle Button */}
           <button
-            onClick={() => setTimeFilter(timeFilter === 'today' ? 'all' : 'today')}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
-              timeFilter === 'today'
-                ? 'bg-stone-800 text-white shadow-xs'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+            onClick={() => setShowDateFilter(!showDateFilter)}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
+              isDateFiltered || showDateFilter
+                ? 'bg-[#1D3A30] text-[#E8D5A8] border border-[#C7B895]/60 shadow-xs'
+                : 'bg-white text-[#1D3A30]/80 border border-[#C7B895]/30 hover:bg-[#FAF7F0]'
             }`}
+            title="فرز وتحديد الطلبات حسب فترة تواريخ مخصصة"
           >
-            طلبات اليوم
+            <Calendar className="w-3.5 h-3.5 text-[#C7B895]" />
+            <span>فرز بالتاريخ</span>
+            {isDateFiltered && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            )}
           </button>
-          <button
-            onClick={() => setTimeFilter(timeFilter === 'month' ? 'all' : 'month')}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition ${
-              timeFilter === 'month'
-                ? 'bg-stone-800 text-white shadow-xs'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-            }`}
-          >
-            هذا الشهر
-          </button>
+
+          {isDateFiltered && (
+            <button
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+              }}
+              className="px-2.5 py-1.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition whitespace-nowrap cursor-pointer"
+              title="إلغاء فرز التواريخ"
+            >
+              إلغاء التاريخ ✕
+            </button>
+          )}
         </div>
+
+        {/* Expandable Custom Date Range Filter Panel */}
+        <AnimatePresence>
+          {showDateFilter && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden bg-white p-3 rounded-2xl border border-[#C7B895]/40 shadow-xs space-y-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#1D3A30] flex items-center gap-1.5">
+                  <Filter className="w-3.5 h-3.5 text-[#C7B895]" />
+                  تحديد الطلبات في فترة تواريخ مخصصة:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      setStartDate(todayStr);
+                      setEndDate(todayStr);
+                    }}
+                    className="text-[10px] font-bold text-[#1D3A30] bg-[#FAF7F0] px-2 py-0.5 rounded border border-[#C7B895]/30 hover:bg-[#E8D5A8]/50"
+                  >
+                    اليوم
+                  </button>
+                  <button
+                    onClick={() => {
+                      const d = new Date();
+                      const firstDay = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+                      const todayStr = d.toISOString().split('T')[0];
+                      setStartDate(firstDay);
+                      setEndDate(todayStr);
+                    }}
+                    className="text-[10px] font-bold text-[#1D3A30] bg-[#FAF7F0] px-2 py-0.5 rounded border border-[#C7B895]/30 hover:bg-[#E8D5A8]/50"
+                  >
+                    هذا الشهر
+                  </button>
+                  <button
+                    onClick={() => setShowDateFilter(false)}
+                    className="text-[#1D3A30]/50 hover:text-[#1D3A30] p-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div>
+                  <label className="block text-[10px] font-bold text-[#1D3A30]/70 mb-1">
+                    تاريخ البداية (من):
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full bg-[#FAF7F0] border border-[#C7B895]/40 rounded-xl px-2.5 py-1.5 text-xs text-[#1D3A30] focus:outline-none focus:ring-1 focus:ring-[#1D3A30]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#1D3A30]/70 mb-1">
+                    تاريخ النهاية (إلى):
+                  </label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full bg-[#FAF7F0] border border-[#C7B895]/40 rounded-xl px-2.5 py-1.5 text-xs text-[#1D3A30] focus:outline-none focus:ring-1 focus:ring-[#1D3A30]"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Orders Mobile Feed List */}

@@ -53,16 +53,13 @@ export default function NasjahLogo({
         </div>
         {showText && (
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-sm tracking-wider uppercase text-[#FAF7F0] font-sans">
-                نَسْجَة
-              </span>
-              <span className="text-[10px] bg-[#C7B895]/20 text-[#E8D5A8] border border-[#C7B895]/40 px-1.5 py-0.2 rounded font-bold">
-                فاخر
+            <div className="flex items-center">
+              <span className="font-extrabold text-sm tracking-wider text-[#FAF7F0] font-sans">
+                &apos;نَسْجَة&apos;
               </span>
             </div>
             <p className="text-[10px] text-[#C7B895] font-medium truncate">
-              دار خياطة وتفصيل الأقمشة
+              خياطة وتفصيل الأقمشة
             </p>
           </div>
         )}

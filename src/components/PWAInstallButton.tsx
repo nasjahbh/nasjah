@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
-import { Download, Check } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 export const PWAInstallButton: React.FC<{ className?: string }> = ({ className = '' }) => {
   const { isInstalled, install } = usePWAInstall();
@@ -30,12 +30,12 @@ export const PWAInstallButton: React.FC<{ className?: string }> = ({ className =
     <button
       onClick={handleInstallClick}
       disabled={installing}
-      className={`inline-flex items-center gap-1.5 bg-[#1D3A30] hover:bg-[#25493D] text-[#E8D5A8] px-3 py-1.5 rounded-xl text-xs font-bold shadow-xs transition-all border border-[#C7B895]/40 active:scale-95 disabled:opacity-75 ${className}`}
-      title="تثبيت تطبيق دار نَسْجَة مباشرة على جهازك"
+      className={`w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] border border-[#C7B895]/30 shadow-xs transition-all active:scale-95 disabled:opacity-75 cursor-pointer ${className}`}
+      title="تثبيت تطبيق 'نَسْجَة' على جهازك"
     >
-      <Download className={`w-3.5 h-3.5 text-[#C7B895] ${installing ? 'animate-pulse' : ''}`} />
-      <span>{installing ? 'جاري التثبيت...' : 'تثبيت التطبيق'}</span>
+      <Download className={`w-4 h-4 text-[#E8D5A8] ${installing ? 'animate-bounce' : ''}`} />
     </button>
   );
 };
+
 

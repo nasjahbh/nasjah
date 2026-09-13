@@ -109,28 +109,32 @@ export default function Inventory() {
     setNewFabric({ name: '', quantity: 1, price: 0, imageUrl: '' });
   };
 
-  const handleUpdateQuantity = (id: string, delta: number) => {
-    const updated = inventory.map(item => {
-      if (item.id === id) {
-        const newQty = Math.max(0, Math.round(((Number(item.quantity) || 0) + delta) * 10) / 10);
-        return { ...item, quantity: newQty };
-      }
-      return item;
-    });
-    saveInventory(updated);
+  const [editingFabricId, setEditingFabricId] = useState<string | null>(null);
+  const [editingQtyValue, setEditingQtyValue] = useState<string>('');
+
+  const handleStartEditingQty = (fabric: Fabric) => {
+    setEditingFabricId(fabric.id);
+    setEditingQtyValue(String(fabric.quantity));
   };
 
-  const handleSetExactQuantity = (id: string) => {
-    const item = inventory.find(i => i.id === id);
-    if (!item) return;
-    const input = window.prompt(`تعديل أمتار قماش "${item.name}" (يمكن كتابة كسور مثل 22.5):`, String(item.quantity));
-    if (input !== null) {
-      const parsed = parseFloat(input.trim());
-      if (!isNaN(parsed) && parsed >= 0) {
-        const clean = Math.round(parsed * 10) / 10;
-        const updated = inventory.map(it => it.id === id ? { ...it, quantity: clean } : it);
-        saveInventory(updated);
-      }
+  const handleFinishEditingQty = (id: string) => {
+    if (editingFabricId !== id) return;
+    const parsed = parseFloat(editingQtyValue.trim());
+    if (!isNaN(parsed) && parsed >= 0) {
+      const clean = Math.round(parsed * 10) / 10;
+      const updated = inventory.map(it => it.id === id ? { ...it, quantity: clean } : it);
+      saveInventory(updated);
+    }
+    setEditingFabricId(null);
+    setEditingQtyValue('');
+  };
+
+  const handleKeyDownEditingQty = (e: React.KeyboardEvent<HTMLInputElement>, id: string) => {
+    if (e.key === 'Enter') {
+      handleFinishEditingQty(id);
+    } else if (e.key === 'Escape') {
+      setEditingFabricId(null);
+      setEditingQtyValue('');
     }
   };
 
@@ -208,9 +212,10 @@ export default function Inventory() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+        <div className="flex flex-col gap-2.5">
           {filteredInventory.map(item => {
             const isLow = (Number(item.quantity) || 0) <= 2;
+            const isEditing = editingFabricId === item.id;
 
             return (
               <motion.div
@@ -218,84 +223,77 @@ export default function Inventory() {
                 layout
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`p-3.5 rounded-2xl border transition shadow-xs flex items-center gap-3 ${
+                className={`px-3.5 py-2.5 rounded-2xl border transition shadow-xs flex items-center justify-between gap-2.5 sm:gap-4 flex-nowrap whitespace-nowrap overflow-x-auto no-scrollbar ${
                   isLow ? 'bg-[#FAF7F0] border-amber-300' : 'bg-white border-[#C7B895]/30 hover:border-[#C7B895]'
                 }`}
               >
-                {/* Thumbnail */}
-                <div className="w-16 h-16 rounded-xl bg-[#FAF7F0] flex-shrink-0 overflow-hidden border border-[#C7B895]/30 flex items-center justify-center">
-                  {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                {/* 1. Thumbnail + Fabric Name (Left/Right side in RTL) */}
+                <div className="flex items-center gap-2.5 min-w-0 flex-shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-[#FAF7F0] flex-shrink-0 overflow-hidden border border-[#C7B895]/30 flex items-center justify-center">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-[#A99872]" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-xs sm:text-sm text-[#1D3A30] truncate max-w-[120px] sm:max-w-[200px]">
+                      {item.name}
+                    </h3>
+                    <p className="text-[10px] font-bold text-[#A99872] font-mono">
+                      {item.price} د.ب <span className="text-[9px] font-normal text-[#1D3A30]/60">/متر</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Direct Click-to-Edit Quantity In-Place (Single Horizontal Line) */}
+                <div className="flex items-center gap-1.5 flex-shrink-0 bg-[#FAF7F0] px-2.5 py-1.5 rounded-xl border border-[#C7B895]/30">
+                  <span className="text-[10px] text-[#1D3A30]/70 font-semibold hidden xs:inline">
+                    المتوفر:
+                  </span>
+                  {isEditing ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        autoFocus
+                        value={editingQtyValue}
+                        onChange={(e) => setEditingQtyValue(e.target.value)}
+                        onBlur={() => handleFinishEditingQty(item.id)}
+                        onKeyDown={(e) => handleKeyDownEditingQty(e, item.id)}
+                        className="w-16 bg-white border border-[#1D3A30] rounded-lg px-1.5 py-0.5 text-xs font-bold font-mono text-center text-[#1D3A30] focus:outline-none"
+                      />
+                      <span className="text-xs font-bold text-[#1D3A30]">متر</span>
+                    </div>
                   ) : (
-                    <ImageIcon className="w-6 h-6 text-[#A99872]" />
+                    <button
+                      onClick={() => handleStartEditingQty(item)}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border border-dashed border-[#C7B895]/60 hover:bg-[#E8D5A8]/30 hover:border-[#1D3A30] transition cursor-pointer ${
+                        isLow ? 'text-amber-800 bg-amber-50/50' : 'text-[#1D3A30] bg-white'
+                      }`}
+                      title="اضغط لتعديل عدد الأمتار كتابةً مباشرة"
+                    >
+                      <span className="text-xs sm:text-sm font-black font-mono">
+                        {item.quantity}
+                      </span>
+                      <span className="text-[10px] font-bold text-[#1D3A30]/70">متر</span>
+                    </button>
                   )}
                 </div>
 
-                {/* Details */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-xs text-[#1D3A30] truncate">{item.name}</h3>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setFabricToDelete(item);
-                      }}
-                      className="p-1.5 text-[#1D3A30]/50 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                      title="حذف القماش"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <p className="text-[11px] font-bold text-[#A99872] font-mono mt-0.5">
-                    {item.price} د.ب <span className="text-[9px] font-normal text-[#1D3A30]/60">/ للمتر</span>
-                  </p>
-
-                  {/* Quantity Stepper with ±0.5 support */}
-                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-[#C7B895]/20">
-                    <span className="text-[10px] text-[#1D3A30]/70 font-medium">الكمية المتوفرة:</span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleUpdateQuantity(item.id, -0.5)}
-                        disabled={item.quantity <= 0}
-                        className="px-1.5 py-0.5 bg-[#FAF7F0] hover:bg-[#E8D5A8]/50 text-[#1D3A30] border border-[#C7B895]/30 rounded-md text-[9px] font-bold disabled:opacity-30 transition active:scale-95"
-                        title="إنقاص نصف متر (-0.5)"
-                      >
-                        -0.5
-                      </button>
-                      <button
-                        onClick={() => handleUpdateQuantity(item.id, -1)}
-                        disabled={item.quantity <= 0}
-                        className="w-5.5 h-5.5 bg-[#FAF7F0] hover:bg-[#E8D5A8]/50 text-[#1D3A30] border border-[#C7B895]/30 rounded-md flex items-center justify-center font-bold disabled:opacity-30 transition active:scale-95"
-                        title="إنقاص متر كامل (-1)"
-                      >
-                        <Minus className="w-2.5 h-2.5" />
-                      </button>
-                      <button
-                        onClick={() => handleSetExactQuantity(item.id)}
-                        className={`text-xs font-extrabold font-mono px-1 py-0.5 rounded hover:bg-[#C7B895]/20 transition ${isLow ? 'text-amber-800' : 'text-[#1D3A30]'}`}
-                        title="انقر لتعديل الأمتار مباشرة (مثل 22.5)"
-                      >
-                        {item.quantity} م
-                      </button>
-                      <button
-                        onClick={() => handleUpdateQuantity(item.id, 1)}
-                        className="w-5.5 h-5.5 bg-[#FAF7F0] hover:bg-[#E8D5A8]/50 text-[#1D3A30] border border-[#C7B895]/30 rounded-md flex items-center justify-center font-bold transition active:scale-95"
-                        title="زيادة متر كامل (+1)"
-                      >
-                        <Plus className="w-2.5 h-2.5" />
-                      </button>
-                      <button
-                        onClick={() => handleUpdateQuantity(item.id, 0.5)}
-                        className="px-1.5 py-0.5 bg-[#FAF7F0] hover:bg-[#E8D5A8]/50 text-[#1D3A30] border border-[#C7B895]/30 rounded-md text-[9px] font-bold transition active:scale-95"
-                        title="زيادة نصف متر (+0.5)"
-                      >
-                        +0.5
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                {/* 3. Delete Action Button */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setFabricToDelete(item);
+                  }}
+                  className="p-1.5 text-[#1D3A30]/40 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition flex-shrink-0 cursor-pointer"
+                  title="حذف القماش"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </motion.div>
             );
           })}

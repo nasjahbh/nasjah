@@ -1,6 +1,6 @@
 {
-  "name": "دار نَسْجَة للأقمشة الراقية",
-  "description": "دار نَسْجَة للأقمشة الراقية - لوحة الإدارة المتكاملة للطلبات والمخزون والميزانية",
+  "name": "'نَسْجَة'",
+  "description": "'نَسْجَة' - لوحة الإدارة المتكاملة للطلبات والمخزون والميزانية",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

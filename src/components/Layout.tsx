@@ -27,8 +27,21 @@ export default function Layout() {
     try {
       await syncWithServer();
       updateBadges();
-    } finally {
-      setTimeout(() => setIsSyncingData(false), 500);
+      // Ensure any service worker caches or stale files are bypassed and page is refreshed
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.update().catch(() => {});
+        }
+      }
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name))).catch(() => {});
+      }
+      // Force reload from server bypassing browser cache
+      window.location.reload();
+    } catch {
+      window.location.reload();
     }
   };
 
@@ -105,14 +118,17 @@ export default function Layout() {
 
   const getPageTitle = () => {
     switch (location.pathname) {
-      case '/': return 'لوحة التحكم الرئيسية';
+      case '/': return '';
       case '/orders': return 'الطلبات والمبيعات';
       case '/inventory': return 'المخزون والأقمشة';
       case '/expenses': return 'سجل المصروفات';
       case '/budget': return 'الميزانية والأرباح';
-      default: return 'دار نَسْجَة';
+      default: return '';
     }
   };
+
+  const pageTitle = getPageTitle();
+  const isStaticPage = location.pathname === '/' || location.pathname === '/budget';
 
   const todayFormatted = new Date().toLocaleDateString('ar-BH', { 
     weekday: 'long', 
@@ -127,52 +143,26 @@ export default function Layout() {
       {/* ========================================================================= */}
       {/* 1. DESKTOP & TABLET TOP HEADER BAR (md: and up)                           */}
       {/* ========================================================================= */}
-      <header className="hidden md:flex h-16 bg-[#1D3A30] text-[#FAF7F0] px-5 lg:px-8 items-center justify-between border-b border-[#C7B895]/25 shadow-md flex-shrink-0 z-30">
+      <header className="hidden md:flex h-15 bg-[#1D3A30] text-[#FAF7F0] px-5 lg:px-8 items-center justify-between border-b border-[#C7B895]/25 shadow-md flex-shrink-0 z-30">
         {/* Brand Logo & Title */}
         <div className="flex items-center gap-3">
           <NasjahLogo variant="emblem" size="sm" className="ring-1 ring-[#C7B895]/40" />
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-base tracking-wider text-[#FAF7F0]">دار نَسْجَة</span>
-              <span className="text-[10px] bg-[#C7B895]/20 text-[#E8D5A8] border border-[#C7B895]/30 px-1.5 py-0.2 rounded font-bold">
-                فاخر
-              </span>
-            </div>
-            <p className="text-[11px] text-[#C7B895] font-medium hidden lg:block">
-              خياطة وتفصيل الأقمشة الراقية
-            </p>
+          <div className="flex items-center">
+            <span className="font-extrabold text-base tracking-wider text-[#FAF7F0] font-sans">
+              &apos;نَسْجَة&apos;
+            </span>
           </div>
         </div>
 
-        {/* Center Page Tabs */}
-        <nav className="flex items-center gap-1 bg-[#25493D]/70 p-1.5 rounded-2xl border border-[#C7B895]/30 shadow-inner">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all relative",
-                  isActive 
-                    ? "bg-[#1D3A30] text-[#E8D5A8] shadow-xs border border-[#C7B895]/40" 
-                    : "text-[#FAF7F0]/75 hover:text-white hover:bg-[#25493D]/50"
-                )}
-              >
-                <Icon className={cn("w-4 h-4", isActive ? "text-[#E8D5A8]" : "text-[#C7B895]")} />
-                <span>{item.name}</span>
-                {item.badge && (
-                  <span className={cn("text-[9px] font-bold px-1.5 py-0.2 rounded-full", item.badgeColor)}>
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Current Active Page Title Indicator on Desktop & Tablet (hidden on main dashboard) */}
+        {pageTitle ? (
+          <div className="flex items-center gap-2 bg-[#25493D]/60 px-4 py-1.5 rounded-2xl border border-[#C7B895]/30 shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-[#C7B895]" />
+            <span className="text-xs font-extrabold text-[#E8D5A8]">{pageTitle}</span>
+          </div>
+        ) : <div />}
 
-        {/* Right Actions: Sync, Date, Instagram, Logout */}
+        {/* Right Actions: Sync, Date, Instagram, PWA, Logout */}
         <div className="flex items-center gap-2.5">
           {/* Cloud Storage Status Indicator */}
           <div 
@@ -187,7 +177,7 @@ export default function Layout() {
           <button
             onClick={handleManualSync}
             disabled={isSyncingData}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] rounded-xl border border-[#C7B895]/30 text-xs font-bold transition active:scale-95 disabled:opacity-75"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] rounded-xl border border-[#C7B895]/30 text-xs font-bold transition active:scale-95 disabled:opacity-75 cursor-pointer"
             title="مزامنة مع قاعدة البيانات السحابية"
           >
             <RefreshCw className={cn("w-3.5 h-3.5", isSyncingData && "animate-spin text-white")} />
@@ -203,7 +193,7 @@ export default function Layout() {
             href="https://instagram.com/nasjah.bh"
             target="_blank"
             rel="noreferrer"
-            className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] transition border border-[#C7B895]/30"
+            className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] transition border border-[#C7B895]/30 cursor-pointer"
             title="حساب إنستغرام @nasjah.bh"
           >
             <Instagram className="w-4 h-4" />
@@ -213,7 +203,7 @@ export default function Layout() {
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-rose-800/40 active:scale-95"
+            className="flex items-center gap-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-rose-800/40 active:scale-95 cursor-pointer"
             title="تسجيل الخروج"
           >
             <LogOut className="w-3.5 h-3.5 text-rose-400" />
@@ -229,24 +219,25 @@ export default function Layout() {
         <div className="flex items-center gap-2.5">
           <NasjahLogo variant="emblem" size="sm" />
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-sm tracking-wider text-[#FAF7F0]">نَسْجَة</span>
-              <span className="text-[9px] bg-[#C7B895]/20 text-[#E8D5A8] border border-[#C7B895]/30 px-1.5 py-0.2 rounded font-bold">
-                فاخر
+            <div className="flex items-center">
+              <span className="font-extrabold text-sm tracking-wider text-[#FAF7F0] font-sans">
+                &apos;نَسْجَة&apos;
               </span>
             </div>
-            <p className="text-[10px] text-[#C7B895] font-medium">
-              {getPageTitle()}
-            </p>
+            {pageTitle ? (
+              <p className="text-[10px] text-[#C7B895] font-medium">
+                {pageTitle}
+              </p>
+            ) : null}
           </div>
         </div>
 
-        {/* Mobile Header Actions (Sync, Instagram, PWA, Logout) - No side menu needed! */}
+        {/* Mobile Header Actions (Sync, Instagram, PWA, Logout) */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={handleManualSync}
             disabled={isSyncingData}
-            className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] transition border border-[#C7B895]/30 active:scale-95 disabled:opacity-75"
+            className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] transition border border-[#C7B895]/30 active:scale-95 disabled:opacity-75 cursor-pointer"
             title="مزامنة مع قاعدة البيانات السحابية"
           >
             <RefreshCw className={cn("w-4 h-4", isSyncingData && "animate-spin text-[#FAF7F0]")} />
@@ -256,17 +247,17 @@ export default function Layout() {
             href="https://instagram.com/nasjah.bh"
             target="_blank"
             rel="noreferrer"
-            className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] transition border border-[#C7B895]/30 active:scale-95"
+            className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] transition border border-[#C7B895]/30 active:scale-95 cursor-pointer"
             title="حساب إنستغرام @nasjah.bh"
           >
             <Instagram className="w-4 h-4" />
           </a>
 
-          <PWAInstallButton className="py-1 px-2 text-[10px] hidden sm:flex" />
+          <PWAInstallButton />
 
           <button
             onClick={handleLogout}
-            className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 transition border border-rose-800/40 active:scale-95"
+            className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 transition border border-rose-800/40 active:scale-95 cursor-pointer"
             title="تسجيل الخروج"
           >
             <LogOut className="w-4 h-4" />
@@ -275,19 +266,27 @@ export default function Layout() {
       </header>
 
       {/* ========================================================================= */}
-      {/* 3. SCROLLABLE VIEWPORT CONTENT                                            */}
+      {/* 3. MAIN VIEWPORT CONTENT (Static on Home & Budget, Scrollable on Others) */}
       {/* ========================================================================= */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-5 lg:p-8 pb-24 md:pb-8 relative no-scrollbar bg-[#FAF7F0]">
-        <div className="max-w-7xl mx-auto w-full">
+      <main className={cn(
+        "flex-1 p-2 sm:p-3 lg:p-4 relative bg-[#FAF7F0] flex flex-col",
+        isStaticPage 
+          ? "overflow-hidden pb-16 sm:pb-18 lg:pb-20 no-scrollbar" 
+          : "overflow-y-auto pb-24 sm:pb-28"
+      )}>
+        <div className={cn(
+          "max-w-7xl mx-auto w-full flex-1 flex flex-col min-h-0",
+          isStaticPage && "overflow-hidden"
+        )}>
           <Outlet />
         </div>
       </main>
 
       {/* ========================================================================= */}
-      {/* 4. MOBILE BOTTOM NAVIGATION BAR (Direct access to all 5 pages)            */}
+      {/* 4. UNIVERSAL BOTTOM NAVIGATION BAR (Desktop, Tablet & Mobile)            */}
       {/* ========================================================================= */}
-      <div className="flex md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-[#C7B895]/30 shadow-[0_-4px_25px_rgba(29,58,48,0.09)] px-1.5 py-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
-        <nav className="w-full flex items-center justify-around">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-[#C7B895]/30 shadow-[0_-4px_25px_rgba(29,58,48,0.09)] px-2 sm:px-6 py-2 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
+        <nav className="w-full max-w-4xl mx-auto flex items-center justify-around gap-1 sm:gap-3">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
@@ -297,21 +296,21 @@ export default function Layout() {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "relative flex flex-col items-center justify-center flex-1 py-1.5 px-0.5 rounded-xl transition-all duration-150 active:scale-95",
+                  "relative flex flex-col sm:flex-row items-center justify-center flex-1 py-1.5 sm:py-2.5 px-1 sm:px-4 rounded-2xl transition-all duration-150 active:scale-95 cursor-pointer gap-1 sm:gap-2",
                   isActive 
                     ? "text-[#1D3A30] font-bold" 
-                    : "text-[#1D3A30]/55 hover:text-[#1D3A30] font-medium"
+                    : "text-[#1D3A30]/60 hover:text-[#1D3A30] hover:bg-[#FAF7F0] font-medium"
                 )}
               >
                 {isActive && (
                   <motion.div
-                    layoutId="mobileBottomIndicator"
-                    className="absolute inset-0 bg-[#E8D5A8]/45 rounded-xl -z-10 border border-[#C7B895]/40 shadow-xs"
+                    layoutId="universalBottomIndicator"
+                    className="absolute inset-0 bg-[#E8D5A8]/45 rounded-2xl -z-10 border border-[#C7B895]/40 shadow-xs"
                     transition={{ type: "spring", stiffness: 450, damping: 32 }}
                   />
                 )}
-                <div className="relative">
-                  <Icon className={cn("w-5 h-5 transition-transform", isActive && "scale-105 text-[#1D3A30]")} />
+                <div className="relative flex items-center justify-center">
+                  <Icon className={cn("w-5 h-5 sm:w-5.5 sm:h-5.5 transition-transform", isActive && "scale-105 text-[#1D3A30]")} />
                   {item.badge && (
                     <span className={cn(
                       "absolute -top-1.5 -right-2 text-[9px] font-bold min-w-[15px] h-[15px] flex items-center justify-center rounded-full px-0.5 shadow-xs",
@@ -321,7 +320,7 @@ export default function Layout() {
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] font-bold mt-1 tracking-tight leading-none truncate max-w-full">
+                <span className="text-[10px] sm:text-xs font-bold mt-0.5 sm:mt-0 tracking-tight leading-none truncate max-w-full">
                   {item.name}
                 </span>
               </Link>
