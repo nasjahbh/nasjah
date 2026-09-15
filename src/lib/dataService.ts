@@ -7,13 +7,15 @@ export interface StoreData {
   orders: Order[];
   expenses: Expense[];
   inventory: Fabric[];
+  capital?: number;
 }
 
 // In-memory runtime store (ZERO localStorage persistence)
 let cloudStore: StoreData = {
   orders: [],
   expenses: [],
-  inventory: []
+  inventory: [],
+  capital: 0
 };
 
 let isSyncing = false;
@@ -173,6 +175,7 @@ export async function syncToSupabase(data: StoreData): Promise<void> {
             orders: data.orders,
             expenses: data.expenses,
             inventory: sanitizeInventoryForMetadata(data.inventory),
+            capital: data.capital || 0,
             lastUpdated: Date.now()
           }
         }
@@ -228,6 +231,7 @@ export async function syncWithServer(): Promise<StoreData> {
     let cloudOrders: Order[] | null = null;
     let cloudExpenses: Expense[] | null = null;
     let cloudInventory: Fabric[] | null = null;
+    let cloudCapital: number | null = null;
     let tablesQueriedSuccessfully = false;
 
     // STEP 1: Attempt to load from Supabase Cloud directly
@@ -237,6 +241,10 @@ export async function syncWithServer(): Promise<StoreData> {
         const session = sessionData?.session;
 
         if (session) {
+          const metaStore = session.user.user_metadata?.store_data;
+          if (metaStore && typeof metaStore.capital === 'number') {
+            cloudCapital = metaStore.capital;
+          }
           try {
             const [ordersRes, expRes, invRes] = await Promise.all([
               supabase.from('orders').select('*').order('created_at_ms', { ascending: false }),
@@ -336,7 +344,8 @@ export async function syncWithServer(): Promise<StoreData> {
     cloudStore = {
       orders: cloudOrders !== null ? cloudOrders : cloudStore.orders,
       expenses: cloudExpenses !== null ? cloudExpenses : cloudStore.expenses,
-      inventory: cloudInventory !== null ? cloudInventory : cloudStore.inventory
+      inventory: cloudInventory !== null ? cloudInventory : cloudStore.inventory,
+      capital: cloudCapital !== null ? cloudCapital : (cloudStore.capital || 0)
     };
     isInitialCloudLoadComplete = true;
 
@@ -460,6 +469,23 @@ export async function deleteExpensePermanently(expenseId: string): Promise<Expen
   syncToSupabase(cloudStore).catch(() => {});
 
   return updatedExpenses;
+}
+
+export async function persistCapital(amount: number): Promise<void> {
+  cloudStore.capital = amount;
+  notifyDataChanged();
+
+  syncToSupabase(cloudStore).catch(() => {});
+  
+  try {
+    await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'inventory', payload: cloudStore.inventory }) // Dummy ping to trigger backend sync if needed, though mostly it syncs via metadata
+    });
+  } catch (err) {
+    console.warn('Backend sync failed:', err);
+  }
 }
 
 /**

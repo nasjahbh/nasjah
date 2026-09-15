@@ -25,6 +25,7 @@ import { cn } from '../lib/utils';
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [fabrics, setFabrics] = useState<Fabric[]>([]);
+  const availableFabrics = fabrics.filter(f => !f.category || f.category === 'أقمشة');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
@@ -279,7 +280,7 @@ export default function Orders() {
           return;
         }
       }
-    } else if (!customFabricMode && fabrics.length > 0 && !selectedFabricId) {
+    } else if (!customFabricMode && availableFabrics.length > 0 && !selectedFabricId) {
       setStockError('يرجى الضغط على أحد الأقمشة من القائمة الأفقية لاختياره.');
       return;
     }
@@ -937,7 +938,7 @@ export default function Orders() {
                     <div className="space-y-2.5">
                       {/* Horizontal scrollable box containing fabrics with images ("المستطيل") */}
                       <div className="relative bg-[#FAF7F0] p-2.5 rounded-2xl border border-[#C7B895]/40">
-                        {fabrics.length === 0 ? (
+                        {availableFabrics.length === 0 ? (
                           <div className="text-center py-5 px-3">
                             <Layers className="w-8 h-8 text-[#C7B895] mx-auto mb-1.5 opacity-70" />
                             <p className="text-xs font-bold text-[#1D3A30]">لا توجد أقمشة مسجلة في المخزون حالياً</p>
@@ -954,12 +955,12 @@ export default function Orders() {
                           <>
                             <div className="flex items-center justify-between px-1 mb-2 text-[10px] text-[#A99872]">
                               <span className="font-medium">اضغط على أحد الأقمشة لاختياره (اسحب أفقياً):</span>
-                              <span className="font-bold font-mono">{fabrics.length} قماش مسجل</span>
+                              <span className="font-bold font-mono">{availableFabrics.length} قماش مسجل</span>
                             </div>
 
                             {/* Horizontal scroll carousel */}
                             <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none snap-x">
-                              {fabrics.map((f) => {
+                              {availableFabrics.map((f) => {
                                 const isSelected = selectedFabricId === f.id;
                                 const qty = Number(f.quantity) || 0;
                                 const isOutOfStock = qty <= 0;

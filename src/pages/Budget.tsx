@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingUp, TrendingDown, DollarSign, Percent, ArrowLeft, RotateCcw, AlertTriangle, FileSpreadsheet, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getLocalData, resetDatabase, syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
+import { getLocalData, resetDatabase, syncWithServer, EVENT_DATA_UPDATED, persistCapital } from '../lib/dataService';
 
 export default function Budget() {
   const [revenues, setRevenues] = useState(0);
@@ -10,9 +10,12 @@ export default function Budget() {
   const [ordersCount, setOrdersCount] = useState(0);
   const [expensesCount, setExpensesCount] = useState(0);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [capital, setCapital] = useState(0);
+  const [showCapitalModal, setShowCapitalModal] = useState(false);
+  const [capitalInput, setCapitalInput] = useState('');
 
   const loadData = () => {
-    const { orders, expenses: expList } = getLocalData();
+    const { orders, expenses: expList, capital: cap } = getLocalData();
     const totalSales = orders.reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0);
     setRevenues(totalSales);
     setOrdersCount(orders.length);
@@ -20,6 +23,7 @@ export default function Budget() {
     const totalExp = expList.reduce((sum: number, exp: any) => sum + (Number(exp.amount) || 0), 0);
     setExpenses(totalExp);
     setExpensesCount(expList.length);
+    setCapital(cap || 0);
   };
 
   useEffect(() => {
@@ -40,6 +44,16 @@ export default function Budget() {
     setShowResetModal(false);
   };
 
+  const handleSaveCapital = async () => {
+    const parsed = parseFloat(capitalInput);
+    if (!isNaN(parsed) && parsed >= 0) {
+      await persistCapital(parsed);
+      setCapital(parsed);
+    }
+    setShowCapitalModal(false);
+    setCapitalInput('');
+  };
+
   const totalCashflow = revenues + expenses;
   const revenuePercent = totalCashflow > 0 ? Math.round((revenues / totalCashflow) * 100) : 50;
 
@@ -54,6 +68,17 @@ export default function Budget() {
           </p>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2">
+          <button
+            onClick={() => {
+              setCapitalInput(capital > 0 ? String(capital) : '');
+              setShowCapitalModal(true);
+            }}
+            className="bg-[#1D3A30] text-[#E8D5A8] px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold hover:bg-[#25493D] transition flex items-center gap-1 cursor-pointer border border-[#C7B895]/40 shadow-xs"
+            title="تحديد أو تعديل رأس المال"
+          >
+            <DollarSign className="w-3.5 h-3.5 text-[#C7B895]" />
+            <span>{capital > 0 ? `رأس المال: ${capital.toFixed(2)} د.ب` : 'تحديد رأس المال'}</span>
+          </button>
           <button
             onClick={() => window.print()}
             className="bg-[#FAF7F0] text-[#1D3A30] border border-[#C7B895]/30 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold hover:bg-[#E8D5A8]/40 transition flex items-center gap-1 cursor-pointer"
@@ -87,9 +112,20 @@ export default function Budget() {
         <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight my-0.5 text-white font-mono">
           {netProfit.toFixed(2)} <span className="text-base sm:text-xl font-bold text-[#E8D5A8]">د.ب</span>
         </h2>
-        <p className="text-[9px] sm:text-[11px] font-mono text-[#FAF7F0]/80 mt-0.5">
-          {netProfit >= 0 ? '✓ أرباح تشغيلية إيجابية ومستقرة' : '⚠ تنبيه: المصروفات تتجاوز الإيرادات'}
-        </p>
+        {capital > 0 ? (
+          <div className="flex items-center justify-center gap-1.5 sm:gap-3 mt-1 flex-wrap">
+            <span className="text-[9px] sm:text-[11px] font-mono bg-white/10 px-2.5 py-0.5 rounded-lg text-[#FAF7F0]">
+              رأس المال: <strong className="text-[#E8D5A8] font-bold">{capital.toFixed(2)} د.ب</strong>
+            </span>
+            <span className="text-[9px] sm:text-[11px] font-mono bg-white/10 px-2.5 py-0.5 rounded-lg text-[#FAF7F0]">
+              الرصيد الإجمالي: <strong className="text-emerald-300 font-bold">{(capital + netProfit).toFixed(2)} د.ب</strong>
+            </span>
+          </div>
+        ) : (
+          <p className="text-[9px] sm:text-[11px] font-mono text-[#FAF7F0]/80 mt-0.5">
+            {netProfit >= 0 ? '✓ أرباح تشغيلية إيجابية ومستقرة' : '⚠ تنبيه: المصروفات تتجاوز الإيرادات'}
+          </p>
+        )}
       </motion.div>
 
       {/* Bottom Section: Exactly 4 Boxes as a 2x2 Grid (2 on top, 2 below) filling the screen */}
@@ -245,6 +281,62 @@ export default function Budget() {
                 </button>
                 <button
                   onClick={() => setShowResetModal(false)}
+                  className="py-2.5 bg-stone-100 text-stone-700 hover:bg-stone-200 font-bold rounded-xl transition text-xs border border-stone-200"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Capital Edit Modal */}
+      <AnimatePresence>
+        {showCapitalModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 0.6 }} 
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCapitalModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl z-10 text-center space-y-3 border border-[#C7B895]/30"
+            >
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <h3 className="text-sm font-bold text-[#1D3A30]">تحديد رأس المال</h3>
+              <p className="text-xs text-[#1D3A30]/70 leading-relaxed mb-4">
+                أدخل قيمة رأس المال الإجمالي للمشروع.
+              </p>
+              
+              <div className="text-right">
+                <label className="block text-xs font-bold text-[#1D3A30] mb-1.5">رأس المال (د.ب)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={capitalInput}
+                  onChange={(e) => setCapitalInput(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full bg-[#FAF7F0] border border-[#C7B895]/40 rounded-xl px-4 py-2.5 text-sm text-[#1D3A30] font-mono focus:outline-none focus:ring-1 focus:ring-[#1D3A30]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  onClick={handleSaveCapital}
+                  className="py-2.5 bg-[#1D3A30] hover:bg-[#25493D] text-[#E8D5A8] font-bold rounded-xl transition text-xs shadow-xs"
+                >
+                  حفظ
+                </button>
+                <button
+                  onClick={() => setShowCapitalModal(false)}
                   className="py-2.5 bg-stone-100 text-stone-700 hover:bg-stone-200 font-bold rounded-xl transition text-xs border border-stone-200"
                 >
                   إلغاء

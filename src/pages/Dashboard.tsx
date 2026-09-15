@@ -125,53 +125,90 @@ export default function Dashboard() {
   return (
     <div className="h-full flex flex-col justify-between gap-1.5 sm:gap-2.5 pb-1 sm:pb-2 select-none overflow-hidden">
       {/* ========================================================================= */}
-      {/* 1. TOP SECTION: NET PROFIT HERO (Enlarged Vertically & Static)            */}
+      {/* 1. TOP SECTION: FINANCIAL METRICS (صافي الأرباح، المبيعات الكلية، إجمالي المصروفات) */}
       {/* ========================================================================= */}
       <motion.div 
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`p-3 sm:p-4 rounded-2xl sm:rounded-3xl text-center shadow-xs relative overflow-hidden transition-all flex flex-col justify-between border flex-shrink-0 ${
-          netProfit >= 0 
-            ? 'bg-[#1D3A30] text-[#FAF7F0] border-[#C7B895]/30' 
-            : 'bg-rose-950 text-white border-rose-800/40'
-        }`}
+        className="bg-white p-2.5 sm:p-3.5 rounded-2xl sm:rounded-3xl border border-[#C7B895]/30 shadow-xs flex-shrink-0"
       >
-        <div className="flex justify-between items-center mb-1.5">
+        <div className="flex justify-between items-center mb-2 px-0.5">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#C7B895] animate-pulse" />
-            <span className="text-xs sm:text-sm font-bold text-[#E8D5A8]">
-              صافي الأرباح التشغيلية لـ &apos;نَسْجَة&apos;
+            <span className="w-2.5 h-2.5 rounded-full bg-[#1D3A30] animate-pulse" />
+            <span className="text-xs sm:text-sm font-extrabold text-[#1D3A30]">
+              المؤشرات المالية لدار نَسْجَة
             </span>
           </div>
 
           {/* Budget Report Link */}
           <Link 
             to="/budget"
-            className="text-[10px] sm:text-xs text-[#E8D5A8] hover:bg-white/10 flex items-center gap-1 bg-black/25 px-2.5 sm:px-3 py-1 rounded-xl font-bold transition border border-white/10"
+            className="text-[10px] sm:text-xs text-[#1D3A30] hover:text-[#25493D] flex items-center gap-1 bg-[#FAF7F0] px-2.5 py-1 rounded-xl font-bold transition border border-[#C7B895]/30 hover:border-[#1D3A30]"
             title="الانتقال لتقرير الميزانية الشامل"
           >
             <span>تقرير الميزانية</span>
-            <ChevronLeft className="w-3.5 h-3.5 text-[#C7B895]" />
+            <ChevronLeft className="w-3.5 h-3.5 text-[#A99872]" />
           </Link>
         </div>
 
-        <div className="my-1 sm:my-1.5">
-          <h2 className="text-3xl sm:text-4.5xl font-black tracking-tight text-[#FAF7F0] font-mono leading-none">
-            {netProfit.toFixed(2)} <span className="text-base sm:text-2xl font-bold text-[#E8D5A8]">د.ب</span>
-          </h2>
-          <p className="text-[10px] sm:text-xs text-[#C7B895] font-medium mt-1">
-            {netProfit >= 0 ? '✓ أرباح تشغيلية إيجابية ومستقرة' : '⚠ تنبيه: المصروفات تتجاوز الإيرادات'}
-          </p>
+        {/* 1. صافي الأرباح التشغيلية - على العرض الأفقي كاملاً */}
+        <div className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center justify-between px-3.5 sm:px-5 border transition shadow-2xs ${
+          netProfit >= 0 
+            ? 'bg-[#1D3A30] text-[#FAF7F0] border-[#1D3A30]' 
+            : 'bg-rose-950 text-white border-rose-900'
+        }`}>
+          <div className="text-right">
+            <span className="text-xs sm:text-sm font-extrabold text-[#E8D5A8] block">
+              صافي الأرباح التشغيلية
+            </span>
+            <span className="text-[9px] sm:text-[11px] text-[#C7B895] block font-medium mt-0.5">
+              {netProfit >= 0 ? '✓ أرباح تشغيلية إيجابية' : '⚠ تنبيه: عجز تشغيلي مؤقت'}
+            </span>
+          </div>
+          <div className="text-left font-mono">
+            <span className="text-lg sm:text-2xl lg:text-3xl font-black text-white leading-none">
+              {netProfit.toFixed(2)}
+            </span>
+            <span className="text-[10px] sm:text-xs font-bold text-[#E8D5A8] mr-1">د.ب</span>
+          </div>
         </div>
 
-        <div className="mt-2.5 pt-2 sm:pt-2.5 border-t border-[#C7B895]/20 grid grid-cols-2 divide-x divide-x-reverse divide-[#C7B895]/20 text-xs text-center">
-          <div className="px-2">
-            <span className="text-[10px] sm:text-[11px] text-[#C7B895] block mb-0.5">المبيعات الكلية</span>
-            <span className="font-bold text-[#E8D5A8] font-mono text-xs sm:text-sm">+{sales.toFixed(2)} د.ب</span>
+        {/* 2. المبيعات الكلية وإجمالي المصروفات مقسمة تحته (صف من عمودين) */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+          {/* المبيعات الكلية */}
+          <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-[#FAF7F0] border border-[#C7B895]/40 flex items-center justify-between px-3 shadow-2xs">
+            <div>
+              <span className="text-[11px] sm:text-xs font-bold text-[#1D3A30]/80 block">
+                المبيعات الكلية
+              </span>
+              <span className="text-[9px] sm:text-[10px] text-[#1D3A30]/65 block font-medium">
+                {orders.length} طلب مسجل
+              </span>
+            </div>
+            <div className="text-left font-mono">
+              <span className="text-sm sm:text-base lg:text-lg font-black text-[#1D3A30]">
+                +{sales.toFixed(2)}
+              </span>
+              <span className="text-[9px] sm:text-[11px] font-bold text-[#A99872] mr-1">د.ب</span>
+            </div>
           </div>
-          <div className="px-2">
-            <span className="text-[10px] sm:text-[11px] text-[#C7B895] block mb-0.5">إجمالي المصروفات</span>
-            <span className="font-bold text-rose-300 font-mono text-xs sm:text-sm">-{expenses.toFixed(2)} د.ب</span>
+
+          {/* إجمالي المصروفات */}
+          <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-[#FAF7F0] border border-[#C7B895]/40 flex items-center justify-between px-3 shadow-2xs">
+            <div>
+              <span className="text-[11px] sm:text-xs font-bold text-rose-800 block">
+                إجمالي المصروفات
+              </span>
+              <Link to="/expenses" className="text-[9px] sm:text-[10px] text-rose-700 hover:underline block font-medium">
+                سجل المصروفات ←
+              </Link>
+            </div>
+            <div className="text-left font-mono">
+              <span className="text-sm sm:text-base lg:text-lg font-black text-rose-700">
+                -{expenses.toFixed(2)}
+              </span>
+              <span className="text-[9px] sm:text-[11px] font-bold text-rose-400 mr-1">د.ب</span>
+            </div>
           </div>
         </div>
       </motion.div>

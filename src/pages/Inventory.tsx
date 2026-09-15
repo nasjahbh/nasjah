@@ -10,6 +10,7 @@ export default function Inventory() {
   const [fabricToDelete, setFabricToDelete] = useState<Fabric | null>(null);
   const [newFabric, setNewFabric] = useState({ name: '', quantity: 1, price: 0, imageUrl: '' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'أقمشة' | 'تغليف'>('أقمشة');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -99,7 +100,8 @@ export default function Inventory() {
       name: newFabric.name.trim(),
       quantity: !isNaN(qtyNum) ? Math.round(qtyNum * 10) / 10 : 0,
       price: !isNaN(priceNum) ? Math.round(priceNum * 100) / 100 : 0,
-      imageUrl: newFabric.imageUrl || undefined
+      imageUrl: newFabric.imageUrl || undefined,
+      category: activeTab
     };
 
     const newInventory = [fabricItem, ...inventory];
@@ -138,21 +140,26 @@ export default function Inventory() {
     }
   };
 
-  const filteredInventory = inventory.filter(item => 
+  const activeInventory = inventory.filter(item => {
+    const itemCategory = item.category || 'أقمشة';
+    return itemCategory === activeTab;
+  });
+
+  const filteredInventory = activeInventory.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const totalMeters = Math.round(inventory.reduce((acc, f) => acc + (Number(f.quantity) || 0), 0) * 10) / 10;
-  const lowStockCount = inventory.filter(f => (Number(f.quantity) || 0) <= 2).length;
+  const totalMeters = Math.round(activeInventory.reduce((acc, f) => acc + (Number(f.quantity) || 0), 0) * 10) / 10;
+  const lowStockCount = activeInventory.filter(f => (Number(f.quantity) || 0) <= 2).length;
 
   return (
     <div className="space-y-3.5 pb-6">
       {/* Top Mobile Header & Add Button */}
       <div className="flex items-center justify-between bg-white px-4 py-3 rounded-2xl border border-[#C7B895]/30 shadow-xs">
         <div>
-          <h1 className="text-base font-extrabold text-[#1D3A30]">مخزون الأقمشة</h1>
+          <h1 className="text-base font-extrabold text-[#1D3A30]">المخزون</h1>
           <p className="text-[11px] text-[#1D3A30]/70 font-medium">
-            {inventory.length} نوع • {totalMeters} متر متوفر
+            {activeInventory.length} صنف • {totalMeters} الكمية المتوفرة
           </p>
         </div>
         <button
@@ -160,7 +167,27 @@ export default function Inventory() {
           className="bg-[#1D3A30] text-[#E8D5A8] px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-[#25493D] transition flex items-center gap-1.5 shadow-xs active:scale-95 border border-[#C7B895]/30"
         >
           <Plus className="w-4 h-4 text-[#C7B895]" />
-          <span>قماش جديد</span>
+          <span>{activeTab === 'أقمشة' ? 'قماش جديد' : 'مادة جديدة'}</span>
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-2 bg-[#E8D5A8]/20 p-1 rounded-xl">
+        <button
+          onClick={() => setActiveTab('أقمشة')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+            activeTab === 'أقمشة' ? 'bg-white text-[#1D3A30] shadow-sm' : 'text-[#1D3A30]/60 hover:bg-white/50'
+          }`}
+        >
+          الأقمشة
+        </button>
+        <button
+          onClick={() => setActiveTab('تغليف')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+            activeTab === 'تغليف' ? 'bg-white text-[#1D3A30] shadow-sm' : 'text-[#1D3A30]/60 hover:bg-white/50'
+          }`}
+        >
+          التغليف
         </button>
       </div>
 
@@ -169,7 +196,7 @@ export default function Inventory() {
         <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-[#1D3A30]/40" />
         <input
           type="text"
-          placeholder="بحث في أسماء الأقمشة المتوفرة..."
+          placeholder={activeTab === 'أقمشة' ? "بحث في أسماء الأقمشة المتوفرة..." : "بحث في مواد التغليف المتوفرة..."}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-white pr-9 pl-8 py-2.5 text-xs rounded-xl border border-[#C7B895]/30 text-[#1D3A30] placeholder-[#1D3A30]/40 focus:outline-none focus:ring-1 focus:ring-[#1D3A30]"
@@ -189,26 +216,32 @@ export default function Inventory() {
         <div className="bg-[#FAF7F0] border border-[#C7B895] p-3 rounded-2xl flex items-center gap-2.5 text-xs text-[#1D3A30]">
           <AlertCircle className="w-4.5 h-4.5 text-amber-700 flex-shrink-0" />
           <span className="text-[11px] font-bold text-[#1D3A30]">
-            هناك {lowStockCount} نوع قماش اقتربت كميته على النفاد (أقل من مترين).
+            هناك {lowStockCount} {activeTab === 'أقمشة' ? 'نوع قماش اقتربت كميته على النفاد (أقل من مترين)' : 'صنف تغليف اقتربت كميته على النفاد (أقل من حبتين)'}.
           </span>
         </div>
       )}
 
-      {/* Fabrics Grid / Feed */}
+      {/* Inventory Grid / Feed */}
       {filteredInventory.length === 0 ? (
         <div className="bg-white rounded-3xl p-8 text-center border border-[#C7B895]/30 shadow-xs">
           <div className="w-12 h-12 bg-[#FAF7F0] text-[#1D3A30] rounded-full flex items-center justify-center mx-auto mb-2 border border-[#C7B895]/30">
             <ImageIcon className="w-6 h-6 opacity-60 text-[#A99872]" />
           </div>
-          <h3 className="text-sm font-bold text-[#1D3A30]">لا توجد أقمشة مسجلة</h3>
+          <h3 className="text-sm font-bold text-[#1D3A30]">
+            {activeTab === 'أقمشة' ? 'لا توجد أقمشة مسجلة' : 'لا توجد مواد تغليف مسجلة'}
+          </h3>
           <p className="text-xs text-[#1D3A30]/60 mt-1">
-            {searchQuery ? 'لا توجد نتائج تطابق بحثك' : 'ابدأ بإضافة أول نوع قماش لإدارة كمياته وتحديد أسعاره'}
+            {searchQuery 
+              ? 'لا توجد نتائج تطابق بحثك' 
+              : activeTab === 'أقمشة' 
+                ? 'ابدأ بإضافة أول نوع قماش لإدارة كمياته وتحديد أسعاره'
+                : 'ابدأ بإضافة أول مادة تغليف (أكياس، بوكسات، بطاقات، شرائط) لمتابعة المخزون'}
           </p>
           <button
             onClick={() => setShowModal(true)}
             className="mt-4 bg-[#1D3A30] text-[#E8D5A8] text-xs font-bold px-4 py-2.5 rounded-xl border border-[#C7B895]/40"
           >
-            + إضافة قماش جديد
+            {activeTab === 'أقمشة' ? '+ إضافة قماش جديد' : '+ إضافة مادة تغليف جديدة'}
           </button>
         </div>
       ) : (
@@ -216,6 +249,7 @@ export default function Inventory() {
           {filteredInventory.map(item => {
             const isLow = (Number(item.quantity) || 0) <= 2;
             const isEditing = editingFabricId === item.id;
+            const unitLabel = (item.category === 'تغليف') ? 'قطعة' : 'متر';
 
             return (
               <motion.div
@@ -227,7 +261,7 @@ export default function Inventory() {
                   isLow ? 'bg-[#FAF7F0] border-amber-300' : 'bg-white border-[#C7B895]/30 hover:border-[#C7B895]'
                 }`}
               >
-                {/* 1. Thumbnail + Fabric Name (Left/Right side in RTL) */}
+                {/* 1. Thumbnail + Name */}
                 <div className="flex items-center gap-2.5 min-w-0 flex-shrink-0">
                   <div className="w-11 h-11 rounded-xl bg-[#FAF7F0] flex-shrink-0 overflow-hidden border border-[#C7B895]/30 flex items-center justify-center">
                     {item.imageUrl ? (
@@ -241,12 +275,12 @@ export default function Inventory() {
                       {item.name}
                     </h3>
                     <p className="text-[10px] font-bold text-[#A99872] font-mono">
-                      {item.price} د.ب <span className="text-[9px] font-normal text-[#1D3A30]/60">/متر</span>
+                      {item.price} د.ب <span className="text-[9px] font-normal text-[#1D3A30]/60">/{unitLabel}</span>
                     </p>
                   </div>
                 </div>
 
-                {/* 2. Direct Click-to-Edit Quantity In-Place (Single Horizontal Line) */}
+                {/* 2. Direct Click-to-Edit Quantity In-Place */}
                 <div className="flex items-center gap-1.5 flex-shrink-0 bg-[#FAF7F0] px-2.5 py-1.5 rounded-xl border border-[#C7B895]/30">
                   <span className="text-[10px] text-[#1D3A30]/70 font-semibold hidden xs:inline">
                     المتوفر:
@@ -255,7 +289,7 @@ export default function Inventory() {
                     <div className="flex items-center gap-1">
                       <input
                         type="number"
-                        step="0.1"
+                        step={unitLabel === 'متر' ? '0.1' : '1'}
                         min="0"
                         autoFocus
                         value={editingQtyValue}
@@ -264,7 +298,7 @@ export default function Inventory() {
                         onKeyDown={(e) => handleKeyDownEditingQty(e, item.id)}
                         className="w-16 bg-white border border-[#1D3A30] rounded-lg px-1.5 py-0.5 text-xs font-bold font-mono text-center text-[#1D3A30] focus:outline-none"
                       />
-                      <span className="text-xs font-bold text-[#1D3A30]">متر</span>
+                      <span className="text-xs font-bold text-[#1D3A30]">{unitLabel}</span>
                     </div>
                   ) : (
                     <button
@@ -272,12 +306,12 @@ export default function Inventory() {
                       className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border border-dashed border-[#C7B895]/60 hover:bg-[#E8D5A8]/30 hover:border-[#1D3A30] transition cursor-pointer ${
                         isLow ? 'text-amber-800 bg-amber-50/50' : 'text-[#1D3A30] bg-white'
                       }`}
-                      title="اضغط لتعديل عدد الأمتار كتابةً مباشرة"
+                      title="اضغط لتعديل الكمية كتابةً مباشرة"
                     >
                       <span className="text-xs sm:text-sm font-black font-mono">
                         {item.quantity}
                       </span>
-                      <span className="text-[10px] font-bold text-[#1D3A30]/70">متر</span>
+                      <span className="text-[10px] font-bold text-[#1D3A30]/70">{unitLabel}</span>
                     </button>
                   )}
                 </div>
@@ -290,7 +324,7 @@ export default function Inventory() {
                     setFabricToDelete(item);
                   }}
                   className="p-1.5 text-[#1D3A30]/40 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition flex-shrink-0 cursor-pointer"
-                  title="حذف القماش"
+                  title={item.category === 'تغليف' ? 'حذف مادة التغليف' : 'حذف القماش'}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -300,7 +334,7 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Add Fabric Modal */}
+      {/* Add Fabric / Packaging Modal */}
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -321,8 +355,12 @@ export default function Inventory() {
             >
               <div className="p-4 border-b border-[#C7B895]/30 flex justify-between items-center bg-[#1D3A30] text-[#FAF7F0]">
                 <div>
-                  <h3 className="text-sm font-bold text-[#FAF7F0]">إضافة نوع قماش جديد</h3>
-                  <p className="text-[10px] text-[#E8D5A8]">تحديد السعر والكمية والصورة</p>
+                  <h3 className="text-sm font-bold text-[#FAF7F0]">
+                    {activeTab === 'أقمشة' ? 'إضافة نوع قماش جديد' : 'إضافة مادة تغليف جديدة'}
+                  </h3>
+                  <p className="text-[10px] text-[#E8D5A8]">
+                    {activeTab === 'أقمشة' ? 'تحديد السعر والكمية بالمتر والصورة' : 'تحديد السعر والكمية بالعدد والصورة'}
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
@@ -335,12 +373,12 @@ export default function Inventory() {
               <form onSubmit={handleAddFabric} className="flex-1 overflow-y-auto p-4 space-y-3 text-xs no-scrollbar">
                 <div>
                   <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
-                    اسم القماش *
+                    {activeTab === 'أقمشة' ? 'اسم القماش *' : 'اسم مادة التغليف *'}
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="مثال: حرير ياباني، كتان فرنسي، كريب صالونا..."
+                    placeholder={activeTab === 'أقمشة' ? 'مثال: حرير ياباني، كتان فرنسي، كريب صالونا...' : 'مثال: أكياس ورقية، بوكسات فاخرة، شريط ستان، بطاقات شكر...'}
                     value={newFabric.name}
                     onChange={(e) => setNewFabric({ ...newFabric, name: e.target.value })}
                     className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs text-[#1D3A30]"
@@ -350,14 +388,14 @@ export default function Inventory() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
-                      الكمية بالمتر (يقبل كسور النصف مثل 22.5) *
+                      {activeTab === 'أقمشة' ? 'الكمية بالمتر (يقبل الكسور) *' : 'الكمية بالعدد / القطعة *'}
                     </label>
                     <input
                       type="number"
-                      step="0.1"
+                      step={activeTab === 'أقمشة' ? '0.1' : '1'}
                       required
                       min="0"
-                      placeholder="مثال: 22.5"
+                      placeholder={activeTab === 'أقمشة' ? 'مثال: 22.5' : 'مثال: 50'}
                       value={newFabric.quantity}
                       onChange={(e) => setNewFabric({ ...newFabric, quantity: e.target.value })}
                       className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs font-bold font-mono text-[#1D3A30]"
@@ -366,7 +404,7 @@ export default function Inventory() {
 
                   <div>
                     <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
-                      السعر للمتر (د.ب) *
+                      {activeTab === 'أقمشة' ? 'السعر للمتر (د.ب) *' : 'السعر للقطعة (د.ب) *'}
                     </label>
                     <input
                       type="number"
@@ -382,7 +420,7 @@ export default function Inventory() {
 
                 <div>
                   <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
-                    صورة القماش (اختياري)
+                    {activeTab === 'أقمشة' ? 'صورة القماش (اختياري)' : 'صورة مادة التغليف (اختياري)'}
                   </label>
                   <input
                     type="file"
@@ -420,7 +458,7 @@ export default function Inventory() {
                     type="submit"
                     className="w-full py-3 bg-[#1D3A30] text-[#E8D5A8] font-bold rounded-xl text-xs hover:bg-[#25493D] transition active:scale-98 shadow-sm border border-[#C7B895]/30"
                   >
-                    حفظ القماش في المخزون
+                    {activeTab === 'أقمشة' ? 'حفظ القماش في المخزون' : 'حفظ مادة التغليف في المخزون'}
                   </button>
                 </div>
               </form>
@@ -429,7 +467,7 @@ export default function Inventory() {
         )}
       </AnimatePresence>
 
-      {/* Delete Fabric Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {fabricToDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -450,9 +488,11 @@ export default function Inventory() {
                 <Trash2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-sm font-black text-[#1D3A30]">تأكيد حذف القماش</h3>
+                <h3 className="text-sm font-black text-[#1D3A30]">
+                  {fabricToDelete.category === 'تغليف' ? 'تأكيد حذف مادة التغليف' : 'تأكيد حذف القماش'}
+                </h3>
                 <p className="text-xs text-[#1D3A30]/70 mt-1">
-                  هل أنت متأكد من حذف قماش <strong className="text-[#1D3A30] font-bold">"{fabricToDelete.name}"</strong> نهائياً من المخزون؟
+                  هل أنت متأكد من حذف <strong className="text-[#1D3A30] font-bold">"{fabricToDelete.name}"</strong> نهائياً من المخزون؟
                 </p>
               </div>
               <div className="flex gap-2 pt-1">
@@ -468,7 +508,7 @@ export default function Inventory() {
                   onClick={confirmDeleteFabric}
                   className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-sm"
                 >
-                  نعم، احذف القماش
+                  نعم، احذف نهائياً
                 </button>
               </div>
             </motion.div>
