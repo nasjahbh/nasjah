@@ -217,7 +217,7 @@ export default function Login() {
         {/* Brand Header */}
         <div>
           <NasjahLogo variant="emblem" size="lg" className="mx-auto mb-3" />
-          <h1 className="text-xl font-black text-[#1D3A30] tracking-wider">دار نَسْجَة للأقمشة</h1>
+          <h1 className="text-xl font-black text-[#1D3A30] tracking-wider">نَسْجَة للأقمشة</h1>
           <p className="text-[11px] text-[#1D3A30]/70 font-medium mt-1">بوابة الدخول والإدارة الموحدة للأجهزة</p>
         </div>
 
@@ -443,7 +443,7 @@ export default function Login() {
         {/* Footer info */}
         <div className="pt-2 border-t border-[#C7B895]/20 text-center">
           <p className="text-[10px] text-[#1D3A30]/60">
-            مخصص لإدارة دار نَسْجَة • مزامنة سحابية مؤمّنة عبر Supabase
+            مخصص لإدارة نَسْجَة • مزامنة سحابية مؤمّنة عبر Supabase
           </p>
         </div>
       </motion.div>

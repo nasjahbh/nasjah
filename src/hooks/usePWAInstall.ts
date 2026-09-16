@@ -137,8 +137,8 @@ export function usePWAInstall() {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: 'دار نَسْجَة للأقمشة الراقية',
-          text: 'تطبيق إدارة دار نَسْجَة للأقمشة الراقية',
+          title: 'نَسْجَة للأقمشة الراقية',
+          text: 'تطبيق إدارة نَسْجَة للأقمشة الراقية',
           url: window.location.href,
         });
         return true;

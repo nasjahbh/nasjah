@@ -16,10 +16,10 @@ export default defineConfig(() => {
           clientsClaim: true,
           skipWaiting: true,
         },
-        includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'nasjah-logo.jpeg', 'pwa-192x192.png', 'pwa-512x512.png'],
+        includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'nasjah-logo.png', 'nasjah-logo.jpeg', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
           id: '/',
-          name: 'دار نَسْجَة للأقمشة الراقية',
+          name: 'نَسْجَة للأقمشة الراقية',
           short_name: 'نَسْجَة',
           description: 'لوحة الإدارة المتكاملة لمبيعات وأقمشة وميزانية نَسْجَة',
           theme_color: '#1D3A30',

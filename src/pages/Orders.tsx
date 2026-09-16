@@ -424,7 +424,7 @@ export default function Orders() {
     
     doc.setFontSize(20);
     doc.setTextColor(29, 58, 48); // #1D3A30
-    doc.text("فاتورة مبيعات - دار نَسْجَة للأقمشة", 105, 20, { align: "center" });
+    doc.text("فاتورة مبيعات - نَسْجَة للأقمشة", 105, 20, { align: "center" });
     
     doc.setFontSize(10);
     doc.setTextColor(100);
@@ -1292,7 +1292,7 @@ export default function Orders() {
                 <div className="flex items-center gap-2">
                   <NasjahLogo variant="emblem" size="xs" />
                   <span className="font-extrabold text-xs text-[#1D3A30] tracking-wider">
-                    فاتورة دار نَسْجَة
+                    فاتورة نَسْجَة
                   </span>
                 </div>
                 <button

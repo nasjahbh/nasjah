@@ -26,11 +26,11 @@ export default function NasjahLogo({
   if (variant === 'icon' || variant === 'emblem') {
     return (
       <div 
-        className={`relative overflow-hidden rounded-2xl flex items-center justify-center shadow-xs border border-[#C7B895]/40 select-none bg-[#1D3A30] ${sizeMap[size]} ${className}`}
+        className={`relative overflow-hidden rounded-full flex items-center justify-center shadow-xs select-none ${sizeMap[size]} ${className}`}
         title="شعار نَسْجَة"
       >
         <img 
-          src="/nasjah-logo.jpeg" 
+          src="/nasjah-logo.png" 
           alt="شعار نَسْجَة" 
           className="w-full h-full object-cover" 
           referrerPolicy="no-referrer"
@@ -43,9 +43,9 @@ export default function NasjahLogo({
   if (variant === 'mark') {
     return (
       <div className={`flex items-center gap-2.5 select-none ${className}`}>
-        <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center border border-[#C7B895]/40 shadow-xs flex-shrink-0 bg-[#1D3A30]">
+        <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center shadow-xs flex-shrink-0">
           <img 
-            src="/nasjah-logo.jpeg" 
+            src="/nasjah-logo.png" 
             alt="أيقونة نَسْجَة" 
             className="w-full h-full object-cover" 
             referrerPolicy="no-referrer"
@@ -71,9 +71,9 @@ export default function NasjahLogo({
   return (
     <div className={`relative flex flex-col items-center justify-center select-none ${className}`}>
       <img 
-        src="/nasjah-logo.jpeg" 
+        src="/nasjah-logo.png" 
         alt="شعار نَسْجَة" 
-        className="w-full h-auto max-w-[280px] rounded-3xl shadow-lg border border-[#C7B895]/40 object-contain"
+        className="w-full h-auto max-w-[280px] rounded-full shadow-lg border border-[#C7B895]/40 object-contain"
         referrerPolicy="no-referrer"
       />
     </div>

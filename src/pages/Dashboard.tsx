@@ -136,7 +136,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#1D3A30] animate-pulse" />
             <span className="text-xs sm:text-sm font-extrabold text-[#1D3A30]">
-              المؤشرات المالية لدار نَسْجَة
+              المؤشرات المالية لنَسْجَة
             </span>
           </div>
 
@@ -380,7 +380,7 @@ export default function Dashboard() {
               </span>
             </div>
             <span className="text-[10px] sm:text-xs text-[#FAF7F0]/85 block leading-tight mt-0.5">
-              فحص فوري لأداء دار نَسْجَة ومخزون الأقمشة مع حساب @{instagramUsername}
+              فحص فوري لأداء نَسْجَة ومخزون الأقمشة مع حساب @{instagramUsername}
             </span>
           </div>
         </div>
@@ -514,7 +514,7 @@ export default function Dashboard() {
                         جاري فحص وتحليل بيانات المتجر وحساب الإنستغرام...
                       </p>
                       <p className="text-xs text-[#1D3A30]/60 mt-1">
-                        Gemini يقوم بمعالجة مبيعات دار نَسْجَة ومخزون الأقمشة ومحتوى @{instagramUsername}
+                        Gemini يقوم بمعالجة مبيعات نَسْجَة ومخزون الأقمشة ومحتوى @{instagramUsername}
                       </p>
                     </div>
                   </div>
