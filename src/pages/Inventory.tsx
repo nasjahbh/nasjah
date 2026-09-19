@@ -1,14 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Fabric } from '../types';
-import { Plus, AlertCircle, Image as ImageIcon, Upload, Trash2, Minus, Search, X } from 'lucide-react';
+import { Fabric, CRITICAL_FABRIC_THRESHOLD } from '../types';
+import { Plus, AlertCircle, Image as ImageIcon, Upload, Trash2, Edit3, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { persistInventory, deleteFabricPermanently, getLocalData, syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
 
 export default function Inventory() {
   const [inventory, setInventory] = useState<Fabric[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [editingItem, setEditingItem] = useState<Fabric | null>(null);
   const [fabricToDelete, setFabricToDelete] = useState<Fabric | null>(null);
-  const [newFabric, setNewFabric] = useState({ name: '', quantity: 1, price: 0, imageUrl: '' });
+  const [newFabric, setNewFabric] = useState<{
+    name: string;
+    quantity: number | string;
+    price: number | string;
+    imageUrl: string;
+    season?: string;
+  }>({ name: '', quantity: 1, price: 0, imageUrl: '', season: 'صيفي' });
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'أقمشة' | 'تغليف'>('أقمشة');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -88,27 +96,67 @@ export default function Inventory() {
     }
   };
 
-  const handleAddFabric = (e: React.FormEvent) => {
+  const openAddModal = () => {
+    setModalMode('add');
+    setEditingItem(null);
+    setNewFabric({ name: '', quantity: 1, price: 0, imageUrl: '', season: 'صيفي' });
+    setShowModal(true);
+  };
+
+  const openEditModal = (item: Fabric) => {
+    setModalMode('edit');
+    setEditingItem(item);
+    setNewFabric({
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      imageUrl: item.imageUrl || item.image || '',
+      season: item.season || 'صيفي'
+    });
+    setShowModal(true);
+  };
+
+  const handleSaveFabric = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newFabric.name) return;
+    if (!newFabric.name.trim()) return;
     
     const qtyNum = parseFloat(String(newFabric.quantity));
     const priceNum = parseFloat(String(newFabric.price));
+    const cleanQty = !isNaN(qtyNum) ? Math.round(qtyNum * 10) / 10 : 0;
+    const cleanPrice = !isNaN(priceNum) ? Math.round(priceNum * 100) / 100 : 0;
 
-    const fabricItem: Fabric = {
-      id: Date.now().toString(),
-      name: newFabric.name.trim(),
-      quantity: !isNaN(qtyNum) ? Math.round(qtyNum * 10) / 10 : 0,
-      price: !isNaN(priceNum) ? Math.round(priceNum * 100) / 100 : 0,
-      imageUrl: newFabric.imageUrl || undefined,
-      category: activeTab
-    };
-
-    const newInventory = [fabricItem, ...inventory];
-    saveInventory(newInventory);
+    if (modalMode === 'edit' && editingItem) {
+      const updated = inventory.map(item => {
+        if (item.id === editingItem.id) {
+          return {
+            ...item,
+            name: newFabric.name.trim(),
+            quantity: cleanQty,
+            price: cleanPrice,
+            imageUrl: newFabric.imageUrl || undefined,
+            season: activeTab === 'أقمشة' ? (newFabric.season || 'صيفي') : undefined
+          };
+        }
+        return item;
+      });
+      saveInventory(updated);
+    } else {
+      const fabricItem: Fabric = {
+        id: Date.now().toString(),
+        name: newFabric.name.trim(),
+        quantity: cleanQty,
+        price: cleanPrice,
+        imageUrl: newFabric.imageUrl || undefined,
+        category: activeTab,
+        season: activeTab === 'أقمشة' ? (newFabric.season || 'صيفي') : undefined
+      };
+      const newInventory = [fabricItem, ...inventory];
+      saveInventory(newInventory);
+    }
 
     setShowModal(false);
-    setNewFabric({ name: '', quantity: 1, price: 0, imageUrl: '' });
+    setEditingItem(null);
+    setNewFabric({ name: '', quantity: 1, price: 0, imageUrl: '', season: 'صيفي' });
   };
 
   const [editingFabricId, setEditingFabricId] = useState<string | null>(null);
@@ -150,7 +198,10 @@ export default function Inventory() {
   );
 
   const totalMeters = Math.round(activeInventory.reduce((acc, f) => acc + (Number(f.quantity) || 0), 0) * 10) / 10;
-  const lowStockCount = activeInventory.filter(f => (Number(f.quantity) || 0) <= 2).length;
+  const lowStockCount = activeInventory.filter(f => {
+    const q = Number(f.quantity) || 0;
+    return activeTab === 'تغليف' ? q <= 10 : q < CRITICAL_FABRIC_THRESHOLD;
+  }).length;
 
   return (
     <div className="space-y-3.5 pb-6">
@@ -163,7 +214,7 @@ export default function Inventory() {
           </p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openAddModal}
           className="bg-[#1D3A30] text-[#E8D5A8] px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-[#25493D] transition flex items-center gap-1.5 shadow-xs active:scale-95 border border-[#C7B895]/30"
         >
           <Plus className="w-4 h-4 text-[#C7B895]" />
@@ -247,7 +298,7 @@ export default function Inventory() {
       ) : (
         <div className="flex flex-col gap-2.5">
           {filteredInventory.map(item => {
-            const isLow = (Number(item.quantity) || 0) <= 2;
+            const isLow = item.category === 'تغليف' ? (Number(item.quantity) || 0) <= 10 : (Number(item.quantity) || 0) < CRITICAL_FABRIC_THRESHOLD;
             const isEditing = editingFabricId === item.id;
             const unitLabel = (item.category === 'تغليف') ? 'قطعة' : 'متر';
 
@@ -316,18 +367,33 @@ export default function Inventory() {
                   )}
                 </div>
 
-                {/* 3. Delete Action Button */}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setFabricToDelete(item);
-                  }}
-                  className="p-1.5 text-[#1D3A30]/40 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition flex-shrink-0 cursor-pointer"
-                  title={item.category === 'تغليف' ? 'حذف مادة التغليف' : 'حذف القماش'}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {/* 3. Actions: Edit + Delete */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openEditModal(item);
+                    }}
+                    className="p-1.5 text-[#A99872] hover:text-[#1D3A30] hover:bg-[#FAF7F0] rounded-xl transition cursor-pointer"
+                    title={item.category === 'تغليف' ? 'تعديل مادة التغليف' : 'تعديل بيانات وسعر القماش'}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setFabricToDelete(item);
+                    }}
+                    className="p-1.5 text-[#1D3A30]/40 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition flex-shrink-0 cursor-pointer"
+                    title={item.category === 'تغليف' ? 'حذف مادة التغليف' : 'حذف القماش'}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </motion.div>
             );
           })}
@@ -356,10 +422,14 @@ export default function Inventory() {
               <div className="p-4 border-b border-[#C7B895]/30 flex justify-between items-center bg-[#1D3A30] text-[#FAF7F0]">
                 <div>
                   <h3 className="text-sm font-bold text-[#FAF7F0]">
-                    {activeTab === 'أقمشة' ? 'إضافة نوع قماش جديد' : 'إضافة مادة تغليف جديدة'}
+                    {modalMode === 'edit'
+                      ? (activeTab === 'أقمشة' ? 'تعديل بيانات القماش' : 'تعديل بيانات مادة التغليف')
+                      : (activeTab === 'أقمشة' ? 'إضافة نوع قماش جديد' : 'إضافة مادة تغليف جديدة')}
                   </h3>
                   <p className="text-[10px] text-[#E8D5A8]">
-                    {activeTab === 'أقمشة' ? 'تحديد السعر والكمية بالمتر والصورة' : 'تحديد السعر والكمية بالعدد والصورة'}
+                    {modalMode === 'edit'
+                      ? 'تعديل الاسم والكمية المتوفرة والسعر والصورة'
+                      : (activeTab === 'أقمشة' ? 'تحديد السعر والكمية بالمتر والصورة' : 'تحديد السعر والكمية بالعدد والصورة')}
                   </p>
                 </div>
                 <button
@@ -370,7 +440,7 @@ export default function Inventory() {
                 </button>
               </div>
 
-              <form onSubmit={handleAddFabric} className="flex-1 overflow-y-auto p-4 space-y-3 text-xs no-scrollbar">
+              <form onSubmit={handleSaveFabric} className="flex-1 overflow-y-auto p-4 space-y-3 text-xs no-scrollbar">
                 <div>
                   <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
                     {activeTab === 'أقمشة' ? 'اسم القماش *' : 'اسم مادة التغليف *'}
@@ -378,7 +448,7 @@ export default function Inventory() {
                   <input
                     type="text"
                     required
-                    placeholder={activeTab === 'أقمشة' ? 'مثال: حرير ياباني، كتان فرنسي، كريب صالونا...' : 'مثال: أكياس ورقية، بوكسات فاخرة، شريط ستان، بطاقات شكر...'}
+                    placeholder={activeTab === 'أقمشة' ? 'مثال: قطن ياباني تويوبو، سلك زبدة كوري، شكسبير إنجليزي، صوف...' : 'مثال: أكياس ورقية فاخرة، بوكسات هدايا، أزرار صدفية، خيوط تفصيل...'}
                     value={newFabric.name}
                     onChange={(e) => setNewFabric({ ...newFabric, name: e.target.value })}
                     className="w-full p-2.5 rounded-xl border border-[#C7B895]/40 focus:ring-1 focus:ring-[#1D3A30] outline-none text-xs text-[#1D3A30]"
@@ -417,6 +487,35 @@ export default function Inventory() {
                     />
                   </div>
                 </div>
+
+                {activeTab === 'أقمشة' && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
+                      موسم القماش (للتصنيف في قائمة المتجر لخيارات المواسم)
+                    </label>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {[
+                        { id: 'صيفي', label: 'صيفي ☀️' },
+                        { id: 'شتوي', label: 'شتوي ❄️' },
+                        { id: 'ربيعي', label: 'ربيعي 🌿' },
+                        { id: 'كافة المواسم', label: 'كافة الفصول ✨' },
+                      ].map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setNewFabric({ ...newFabric, season: s.id })}
+                          className={`py-2 px-1 rounded-xl text-[11px] font-bold border transition text-center cursor-pointer ${
+                            (newFabric.season || 'صيفي') === s.id
+                              ? 'bg-[#1D3A30] text-[#E8D5A8] border-[#1D3A30] shadow-xs'
+                              : 'bg-white border-[#C7B895]/40 text-[#1D3A30] hover:bg-[#FAF7F0]'
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
@@ -458,7 +557,9 @@ export default function Inventory() {
                     type="submit"
                     className="w-full py-3 bg-[#1D3A30] text-[#E8D5A8] font-bold rounded-xl text-xs hover:bg-[#25493D] transition active:scale-98 shadow-sm border border-[#C7B895]/30"
                   >
-                    {activeTab === 'أقمشة' ? 'حفظ القماش في المخزون' : 'حفظ مادة التغليف في المخزون'}
+                    {modalMode === 'edit'
+                      ? 'حفظ التعديلات'
+                      : (activeTab === 'أقمشة' ? 'حفظ القماش في المخزون' : 'حفظ مادة التغليف في المخزون')}
                   </button>
                 </div>
               </form>

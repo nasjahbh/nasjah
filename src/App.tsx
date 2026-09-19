@@ -13,12 +13,16 @@ import Inventory from './pages/Inventory';
 import Budget from './pages/Budget';
 import Expenses from './pages/Expenses';
 import Setup from './pages/Setup';
+import Settings from './pages/Settings';
+import StoreSettings from './pages/StoreSettings';
+import Store from './pages/Store';
 import { isSupabaseConfigured } from './lib/supabase';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/store" element={<Store />} />
         <Route path="/login" element={!isSupabaseConfigured ? <Navigate to="/setup" replace /> : <Login />} />
         <Route path="/setup" element={<Setup />} />
         
@@ -29,8 +33,12 @@ export default function App() {
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/budget" element={<Budget />} />
             <Route path="/expenses" element={<Expenses />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/store-settings" element={<StoreSettings />} />
           </Route>
         </Route>
+
+        <Route path="*" element={<Navigate to="/store" replace />} />
       </Routes>
     </BrowserRouter>
   );

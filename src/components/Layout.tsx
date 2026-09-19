@@ -3,7 +3,8 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, ShoppingBag, Layers, Receipt, TrendingUp, 
   LogOut, Plus, ChevronLeft, Calendar,
-  Instagram, User, Sparkles, RefreshCw, Cloud
+  Instagram, User, Sparkles, RefreshCw, Cloud,
+  ShieldCheck, Store, Sliders
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
@@ -59,14 +60,17 @@ export default function Layout() {
   const updateBadges = () => {
     try {
       const { orders, inventory } = getCloudData();
-      const pending = orders.filter((o: any) => o.status === 'قيد التجهيز' || !o.status).length;
+      const pending = orders.filter((o: any) => o.status === 'قيد التجهيز' || o.status === 'جاهز للتسليم').length;
       setPendingOrdersCount(pending);
       const sales = orders
-        .filter((o: any) => o.paymentStatus !== 'قيد الدفع')
+        .filter((o: any) => o.paymentStatus !== 'قيد الدفع' && o.status !== 'ملغي')
         .reduce((sum: number, o: any) => sum + (o.total || o.price || 0), 0);
       setTotalSales(sales);
 
-      const lowStock = inventory.filter((f: any) => (Number(f.quantity) || 0) <= 2).length;
+      const lowStock = inventory.filter((f: any) => {
+        const qty = Number(f.quantity) || 0;
+        return f.category === 'تغليف' ? qty <= 10 : qty < 3.5;
+      }).length;
       setLowStockCount(lowStock);
     } catch {
       // ignore
@@ -116,6 +120,8 @@ export default function Layout() {
     },
     { name: 'المصروفات', path: '/expenses', icon: Receipt },
     { name: 'الميزانية', path: '/budget', icon: TrendingUp },
+    { name: 'إعدادات المتجر', path: '/store-settings', icon: Sliders },
+    { name: 'الأمان', path: '/settings', icon: ShieldCheck },
   ];
 
   const getPageTitle = () => {
@@ -125,6 +131,8 @@ export default function Layout() {
       case '/inventory': return 'المخزون والأقمشة';
       case '/expenses': return 'سجل المصروفات';
       case '/budget': return 'الميزانية والأرباح';
+      case '/store-settings': return 'إعدادات متجر الزبائن';
+      case '/settings': return 'الأمان والأجهزة المتصلة';
       default: return '';
     }
   };
@@ -201,6 +209,39 @@ export default function Layout() {
             <Instagram className="w-4 h-4" />
           </a>
 
+          <Link
+            to="/store-settings"
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition active:scale-95 cursor-pointer",
+              location.pathname === '/store-settings'
+                ? "bg-[#C7B895] text-[#1D3A30] border-[#C7B895]"
+                : "bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] border-[#C7B895]/30"
+            )}
+            title="إعدادات متجر الزبائن (رقم الواتساب، المواسم، العرض)"
+          >
+            <Sliders className="w-3.5 h-3.5 text-[#C7B895]" />
+            <span className="hidden xl:inline">إعدادات المتجر</span>
+          </Link>
+
+          <Link
+            to="/settings"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] rounded-xl border border-[#C7B895]/30 text-xs font-bold transition active:scale-95 cursor-pointer"
+            title="إدارة الأجهزة المتصلة والأمان"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden xl:inline">الأجهزة والأمان</span>
+          </Link>
+
+          <Link
+            to="/store"
+            target="_blank"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C7B895] hover:bg-[#B5A57F] text-[#1D3A30] rounded-xl border border-[#C7B895]/30 text-xs font-black transition active:scale-95 cursor-pointer"
+            title="معاينة متجر الزبائن العام"
+          >
+            <Store className="w-3.5 h-3.5 text-[#1D3A30]" />
+            <span className="hidden xl:inline">متجر الزبائن</span>
+          </Link>
+
           <PWAInstallButton />
 
           <button
@@ -254,6 +295,36 @@ export default function Layout() {
           >
             <Instagram className="w-4 h-4" />
           </a>
+
+          <Link
+            to="/store-settings"
+            className={cn(
+              "w-8.5 h-8.5 flex items-center justify-center rounded-xl transition border active:scale-95 cursor-pointer",
+              location.pathname === '/store-settings'
+                ? "bg-[#C7B895] text-[#1D3A30] border-[#C7B895]"
+                : "bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] border-[#C7B895]/30"
+            )}
+            title="إعدادات المتجر"
+          >
+            <Sliders className="w-4 h-4 text-[#C7B895]" />
+          </Link>
+
+          <Link
+            to="/settings"
+            className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-[#25493D] hover:bg-[#2E584A] text-[#E8D5A8] transition border border-[#C7B895]/30 active:scale-95 cursor-pointer"
+            title="الأجهزة المتصلة والأمان"
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          </Link>
+
+          <Link
+            to="/store"
+            target="_blank"
+            className="w-8.5 h-8.5 flex items-center justify-center rounded-xl bg-[#C7B895] hover:bg-[#B5A57F] text-[#1D3A30] transition border border-[#C7B895]/30 active:scale-95 cursor-pointer"
+            title="متجر الزبائن"
+          >
+            <Store className="w-4 h-4 text-[#1D3A30]" />
+          </Link>
 
           <PWAInstallButton />
 

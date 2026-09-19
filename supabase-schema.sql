@@ -66,3 +66,8 @@ CREATE POLICY "Users can manage their own expenses" ON public.expenses
 DROP POLICY IF EXISTS "Users can manage their own inventory" ON public.inventory;
 CREATE POLICY "Users can manage their own inventory" ON public.inventory
     FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- السماح للزبائن بقراءة وتصفح كتالوج الأقمشة في المتجر العام دون التعديل عليه
+DROP POLICY IF EXISTS "Public can view inventory" ON public.inventory;
+CREATE POLICY "Public can view inventory" ON public.inventory
+    FOR SELECT USING (true);

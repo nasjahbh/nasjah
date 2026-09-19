@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Lock, 
@@ -12,7 +12,8 @@ import {
   KeyRound,
   Send,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  ShoppingBag
 } from 'lucide-react';
 import NasjahLogo from '../components/NasjahLogo';
 import { 
@@ -23,10 +24,11 @@ import {
   SecurityState 
 } from '../lib/security';
 import { syncWithServer } from '../lib/dataService';
+import { registerCurrentSession } from '../lib/sessionService';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('nasjahbh@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -96,6 +98,7 @@ export default function Login() {
 
       if (data.session) {
         resetFailedAttempts();
+        registerCurrentSession();
         try {
           await syncWithServer();
         } catch {}
@@ -173,6 +176,7 @@ export default function Login() {
 
       if (data.session) {
         resetFailedAttempts();
+        registerCurrentSession();
         try {
           await syncWithServer();
         } catch {}
@@ -293,7 +297,7 @@ export default function Login() {
                 <input
                   type="email"
                   required
-                  placeholder="nasjahbh@gmail.com"
+                  placeholder="البريد الإلكتروني المعتمد للإدارة"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-[#FAF7F0] border border-[#C7B895]/40 rounded-xl pr-9 pl-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#1D3A30] text-xs text-[#1D3A30] text-left dir-ltr"
@@ -364,7 +368,7 @@ export default function Login() {
                 <input
                   type="email"
                   required
-                  placeholder="nasjahbh@gmail.com"
+                  placeholder="البريد الإلكتروني المعتمد للإدارة"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-[#FAF7F0] border border-[#C7B895]/40 rounded-xl pr-9 pl-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#1D3A30] text-xs text-[#1D3A30] text-left dir-ltr"
@@ -440,8 +444,16 @@ export default function Login() {
           </div>
         )}
 
-        {/* Footer info */}
-        <div className="pt-2 border-t border-[#C7B895]/20 text-center">
+        {/* Link to public store */}
+        <div className="pt-2 border-t border-[#C7B895]/20 text-center space-y-2">
+          <Link
+            to="/store"
+            className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-[#FAF7F0] hover:bg-[#F2ECE0] text-[#1D3A30] text-xs font-bold border border-[#C7B895]/40 transition active:scale-98"
+          >
+            <ShoppingBag className="w-4 h-4 text-[#A99872]" />
+            <span>زيارة متجر الأقمشة الرجالية للزبائن</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#1D3A30]/50" />
+          </Link>
           <p className="text-[10px] text-[#1D3A30]/60">
             مخصص لإدارة نَسْجَة • مزامنة سحابية مؤمّنة عبر Supabase
           </p>

@@ -4,31 +4,8 @@
     "0843d2d4-0702-4ecf-800b-956155367d0a": {
       "orders": [],
       "expenses": [],
-      "inventory": [
-        {
-          "id": "fab-2",
-          "name": "دانتيل فرنسي مطرز فاخر",
-          "quantity": 12,
-          "price": 35,
-          "category": "دانتيل",
-          "imageUrl": "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80"
-        },
-        {
-          "id": "fab-3",
-          "name": "كريب صالونا ملكي",
-          "quantity": 40,
-          "price": 9,
-          "category": "كريب"
-        },
-        {
-          "id": "fab-4",
-          "name": "كتان إيطالي نقي",
-          "quantity": 2,
-          "price": 14,
-          "category": "كتان"
-        }
-      ],
-      "lastUpdated": 1788686498729
+      "inventory": [],
+      "lastUpdated": 1789828925201
     }
   }
 }

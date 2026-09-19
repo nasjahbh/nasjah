@@ -13,7 +13,10 @@ import {
   saveInventoryItem,
   deleteInventoryItem,
   resetStoreData,
+  getStoreSettings,
+  saveStoreSettings,
 } from "./server/db";
+import { inspectSupabaseDatabase, getSupabaseFabrics } from "./server/supabase";
 
 async function startServer() {
   const app = express();
@@ -49,6 +52,72 @@ async function startServer() {
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: Date.now() });
+  });
+
+  // Diagnostic endpoint to inspect and understand Supabase tables completely
+  app.get("/api/supabase-inspect", async (req, res) => {
+    try {
+      const report = await inspectSupabaseDatabase();
+      res.json({ success: true, report });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Public Catalog Endpoint for customer storefront (/store) - strictly isolated, ZERO financial/order data
+  app.get("/api/public-catalog", async (req, res) => {
+    try {
+      // 1. Try pulling directly from Supabase inventory table
+      let rawFabrics = await getSupabaseFabrics();
+
+      // 2. Fallback to server database if Supabase table returned empty
+      if (!rawFabrics || rawFabrics.length === 0) {
+        const data = getUserData();
+        rawFabrics = data.inventory || [];
+      }
+
+      // 3. Map strictly real fabrics - NO fake items added
+      const catalog = rawFabrics.map((item: any) => {
+        const qty = Number(item.quantity || 0);
+        return {
+          id: String(item.id),
+          name: item.name || '',
+          price: Number(item.price || 0),
+          quantity: qty,
+          isAvailable: qty >= 3.5, // Standard men's thobe requirement (~3.5m)
+          isLowStock: qty < 3.5 && qty > 0,
+          isOutOfStock: qty <= 0,
+          category: item.category || 'أقمشة رجالية فاخرة',
+          season: item.season || '',
+          imageUrl: item.imageUrl || item.image_url || item.image || '',
+        };
+      });
+
+      const storeSettings = getStoreSettings();
+
+      res.json({ success: true, catalog, settings: storeSettings, timestamp: Date.now() });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Store Settings (configurable from admin dashboard)
+  app.get("/api/store-settings", (req, res) => {
+    try {
+      const settings = getStoreSettings();
+      res.json({ success: true, settings });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/store-settings", (req, res) => {
+    try {
+      const updated = saveStoreSettings(req.body || {});
+      res.json({ success: true, settings: updated });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   // Database API Endpoints (UID and credentials strictly guarded on server)

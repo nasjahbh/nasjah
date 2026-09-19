@@ -31,14 +31,14 @@ export default function Dashboard() {
     const local = getLocalData();
     setOrders(local.orders);
 
-    // Strictly count paid orders in sales and net profits
+    // Strictly count paid orders that are NOT cancelled in sales and net profits
     const totalSales = local.orders
-      .filter((order: any) => order.paymentStatus !== 'قيد الدفع')
+      .filter((order: any) => order.paymentStatus !== 'قيد الدفع' && order.status !== 'ملغي')
       .reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0) || 0;
     setSales(totalSales);
 
     const pendingSales = local.orders
-      .filter((order: any) => order.paymentStatus === 'قيد الدفع')
+      .filter((order: any) => order.paymentStatus === 'قيد الدفع' && order.status !== 'ملغي')
       .reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0) || 0;
     setPendingPaymentSales(pendingSales);
 
@@ -57,15 +57,15 @@ export default function Dashboard() {
       const currentExpenses = local.expenses || [];
       const currentFabrics = local.inventory || [];
 
-      // Paid sales only for financial accuracy
+      // Paid sales only for financial accuracy (exclude cancelled)
       const totalSales = currentOrders
-        .filter((o: any) => o.paymentStatus !== 'قيد الدفع')
+        .filter((o: any) => o.paymentStatus !== 'قيد الدفع' && o.status !== 'ملغي')
         .reduce((sum: number, o: any) => sum + (o.total || o.price || 0), 0) || 0;
       const totalExp = currentExpenses.reduce((sum: number, e: any) => sum + (Number(e.amount) || 0), 0) || 0;
-      const pendingCount = currentOrders.filter((o: any) => o.status !== 'تم التسليم').length;
-      const deliveredCount = currentOrders.length - pendingCount;
+      const pendingCount = currentOrders.filter((o: any) => o.status === 'قيد التجهيز' || o.status === 'جاهز للتسليم').length;
+      const deliveredCount = currentOrders.filter((o: any) => o.status === 'تم التسليم').length;
       const totalMeters = currentFabrics.reduce((sum: number, f: any) => sum + (Number(f.quantity) || 0), 0);
-      const lowStockCount = currentFabrics.filter((f: any) => (Number(f.quantity) || 0) < 5).length;
+      const lowStockCount = currentFabrics.filter((f: any) => (Number(f.quantity) || 0) < 3.5).length;
 
       const result = await requestAIAnalysis({
         sales: totalSales,
@@ -118,7 +118,8 @@ export default function Dashboard() {
   }, [reloadDashboardData]);
 
   const netProfit = sales - expenses;
-  const pendingOrders = orders.filter(o => o.status !== 'تم التسليم');
+  const pendingOrders = orders.filter(o => o.status === 'قيد التجهيز' || o.status === 'جاهز للتسليم');
+  const deliveredOrdersCount = orders.filter(o => o.status === 'تم التسليم').length;
 
   const handleDeliverOrder = (orderId: string, e?: React.MouseEvent) => {
     if (e) {
@@ -195,7 +196,7 @@ export default function Dashboard() {
                 المبيعات المحصلة
               </span>
               <span className="text-[9px] sm:text-[10px] text-[#1D3A30]/65 block font-medium">
-                {orders.filter((o: any) => o.paymentStatus !== 'قيد الدفع').length} مدفوع
+                {orders.filter((o: any) => o.paymentStatus !== 'قيد الدفع' && o.status !== 'ملغي').length} مدفوع
                 {pendingPaymentSales > 0 && (
                   <span className="text-amber-700 font-bold mr-1">• {pendingPaymentSales.toFixed(1)} قيد الدفع</span>
                 )}
@@ -260,7 +261,7 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center justify-between px-2.5 py-1.5 bg-[#FAF7F0] rounded-xl border border-[#C7B895]/20 text-[10px] sm:text-xs">
               <span className="font-semibold text-[#1D3A30]/70">تم تسليمها</span>
-              <span className="font-mono font-black text-[#1D3A30] text-xs sm:text-sm">{orders.length - pendingOrders.length}</span>
+              <span className="font-mono font-black text-[#1D3A30] text-xs sm:text-sm">{deliveredOrdersCount}</span>
             </div>
           </div>
         </div>
@@ -555,7 +556,7 @@ export default function Dashboard() {
                               تشخيص الحساب والهوية
                             </span>
                             <p className="text-xs text-[#1D3A30] leading-relaxed font-medium">
-                              {analysis?.instagram_summary || "يعد الحساب الواجهة البصرية الأساسية لعرض خامات الأقمشة الفاخرة وتصاميم العبايات للزبونات بالبحرين."}
+                              {analysis?.instagram_summary || "يعد الحساب الواجهة البصرية الأساسية لعرض الأقمشة الرجالية الفاخرة وتفصيل الثياب للزبائن بالبحرين."}
                             </p>
                           </div>
                           <div className="mt-2.5 pt-2 border-t border-[#C7B895]/20 text-[10px] text-[#1D3A30]/60 font-bold flex justify-between">
@@ -571,12 +572,12 @@ export default function Dashboard() {
                               استراتيجية التفاعل والريلز
                             </span>
                             <p className="text-xs text-[#1D3A30] leading-relaxed font-medium">
-                              {analysis?.instagram_engagement_strategy || "التركيز على فيديوهات الريلز القصيرة لإبراز جودة الأقمشة ومرونتها وتفاصيل التطريز الدقيقة لجذب المهتمات."}
+                              {analysis?.instagram_engagement_strategy || "التركيز على مقاطع الريلز لإبراز جودة الأقمشة الرجالية وتفاصيل الخياطة المتقنة للثوب البحريني."}
                             </p>
                           </div>
                           <div className="mt-2.5 pt-2 border-t border-[#C7B895]/20 text-[10px] text-[#1D3A30]/60 font-bold flex justify-between">
                             <span>الجمهور المستهدف</span>
-                            <span className="text-[#1D3A30]">زبونات العبايات والمناسبات</span>
+                            <span className="text-[#1D3A30]">زبائن الثياب الرجالية والمناسبات</span>
                           </div>
                         </div>
 
@@ -587,7 +588,7 @@ export default function Dashboard() {
                               ربط المخزون بالمبيعات
                             </span>
                             <p className="text-xs text-[#1D3A30] leading-relaxed font-medium">
-                              {analysis?.instagram_promotion_advice || "تصوير الأقمشة المتوفرة بالمخزن وتوجيه المتابعات مباشرة لزر الواتساب لتأكيد الحجز الفوري قبل نفاد الأمتار."}
+                              {analysis?.instagram_promotion_advice || "تصوير الأقمشة المتوفرة بالمخزن وتوجيه المتابعين والزبائن مباشرة لزر الواتساب لتأكيد الحجز الفوري قبل نفاد الأمتار."}
                             </p>
                           </div>
                           <div className="mt-2.5 pt-2 border-t border-[#C7B895]/20 text-[10px] text-[#1D3A30]/60 font-bold flex justify-between">

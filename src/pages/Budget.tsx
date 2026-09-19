@@ -18,17 +18,17 @@ export default function Budget() {
   const loadData = () => {
     const { orders, expenses: expList, capital: cap } = getLocalData();
     
-    // Only paid orders are included in revenues & net profit
+    // Only paid orders that are NOT cancelled are included in revenues & net profit
     const paidSales = orders
-      .filter((order: any) => order.paymentStatus !== 'قيد الدفع')
+      .filter((order: any) => order.paymentStatus !== 'قيد الدفع' && order.status !== 'ملغي')
       .reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0);
     const pendingSales = orders
-      .filter((order: any) => order.paymentStatus === 'قيد الدفع')
+      .filter((order: any) => order.paymentStatus === 'قيد الدفع' && order.status !== 'ملغي')
       .reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0);
       
     setRevenues(paidSales);
     setPendingRevenues(pendingSales);
-    setOrdersCount(orders.length);
+    setOrdersCount(orders.filter((order: any) => order.status !== 'ملغي').length);
 
     const totalExp = expList.reduce((sum: number, exp: any) => sum + (Number(exp.amount) || 0), 0);
     setExpenses(totalExp);

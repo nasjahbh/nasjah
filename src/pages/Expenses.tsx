@@ -9,7 +9,7 @@ import { formatDateTime, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateU
 import { persistExpenses, deleteExpensePermanently, getLocalData, syncWithServer, EVENT_DATA_UPDATED } from '../lib/dataService';
 
 const EXPENSE_CATEGORIES = [
-  'أقمشة ومواد خام',
+  'أقمشة ومستلزمات تفصيل',
   'شحن وتوصيل',
   'تغليف ومطبوعات',
   'تسويق وإعلانات',
@@ -35,7 +35,7 @@ export default function Expenses() {
   const [expenseForm, setExpenseForm] = useState({
     description: '',
     amount: '',
-    category: 'أقمشة ومواد خام',
+    category: 'أقمشة ومستلزمات تفصيل',
     paymentMethod: 'بنفت بي' as PaymentMethod,
     paidTo: '',
     datetimeStr: toDatetimeLocal(),
@@ -70,7 +70,7 @@ export default function Expenses() {
     setExpenseForm({
       description: '',
       amount: '',
-      category: 'أقمشة ومواد خام',
+      category: 'أقمشة ومستلزمات تفصيل',
       paymentMethod: 'بنفت بي',
       paidTo: '',
       datetimeStr: toDatetimeLocal(),

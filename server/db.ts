@@ -7,10 +7,37 @@ export const MASTER_USER_UID = process.env.MASTER_USER_UID || "0843d2d4-0702-4ec
 const DB_DIR = path.join(process.cwd(), "data");
 const DB_FILE = path.join(DB_DIR, "database.json");
 
+export interface StoreSettings {
+  whatsappNumber: string;
+  storeName: string;
+  storeTagline: string;
+  announcementText: string;
+  instagramHandle: string;
+  defaultThobeMeters: number;
+  hideOutOfStock: boolean;
+  defaultSeason: 'all' | 'summer' | 'winter' | 'spring';
+  headerVisible: boolean;
+  seasonsOrder: ('winter' | 'summer' | 'spring')[];
+}
+
+export const DEFAULT_STORE_SETTINGS: StoreSettings = {
+  whatsappNumber: "38244795",
+  storeName: "نَسْجَة",
+  storeTagline: "للأقمشة الرجالية وتفصيل الثياب",
+  announcementText: "أقمشة رجالية فاخرة وتفصيل متقن لكافة مناطق البحرين والخليج",
+  instagramHandle: "nasjah.bh",
+  defaultThobeMeters: 3.5,
+  hideOutOfStock: false,
+  defaultSeason: "all",
+  headerVisible: true,
+  seasonsOrder: ['winter', 'summer', 'spring'],
+};
+
 export interface UserStoreData {
   orders: any[];
   expenses: any[];
   inventory: any[];
+  settings?: StoreSettings;
   lastUpdated: number;
 }
 
@@ -19,38 +46,7 @@ export interface DatabaseSchema {
   users: Record<string, UserStoreData>;
 }
 
-const DEFAULT_INVENTORY = [
-  {
-    id: "fab-1",
-    name: "حرير هندي طبيعي",
-    quantity: 25,
-    price: 18,
-    category: "حرير",
-    imageUrl: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=400&q=80"
-  },
-  {
-    id: "fab-2",
-    name: "دانتيل فرنسي مطرز فاخر",
-    quantity: 12,
-    price: 35,
-    category: "دانتيل",
-    imageUrl: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80"
-  },
-  {
-    id: "fab-3",
-    name: "كريب صالونا ملكي",
-    quantity: 40,
-    price: 9,
-    category: "كريب"
-  },
-  {
-    id: "fab-4",
-    name: "كتان إيطالي نقي",
-    quantity: 2, // Low stock indicator
-    price: 14,
-    category: "كتان"
-  }
-];
+const DEFAULT_INVENTORY: any[] = [];
 
 function ensureDirectoryExists() {
   if (!fs.existsSync(DB_DIR)) {
@@ -268,8 +264,40 @@ export function resetStoreData(): boolean {
     orders: [],
     expenses: [],
     inventory: DEFAULT_INVENTORY,
+    settings: DEFAULT_STORE_SETTINGS,
     lastUpdated: Date.now()
   };
   writeDatabase(db);
   return true;
 }
+
+export function getStoreSettings(): StoreSettings {
+  const db = readDatabase();
+  const current = db.users[MASTER_USER_UID];
+  return {
+    ...DEFAULT_STORE_SETTINGS,
+    ...(current?.settings || {})
+  };
+}
+
+export function saveStoreSettings(settings: Partial<StoreSettings>): StoreSettings {
+  const db = readDatabase();
+  const current = db.users[MASTER_USER_UID] || {
+    orders: [],
+    expenses: [],
+    inventory: [],
+    settings: DEFAULT_STORE_SETTINGS,
+    lastUpdated: Date.now()
+  };
+  const merged: StoreSettings = {
+    ...DEFAULT_STORE_SETTINGS,
+    ...(current.settings || {}),
+    ...settings
+  };
+  current.settings = merged;
+  current.lastUpdated = Date.now();
+  db.users[MASTER_USER_UID] = current;
+  writeDatabase(db);
+  return merged;
+}
+
