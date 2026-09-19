@@ -94,12 +94,20 @@ export async function syncToSupabase(data: StoreData): Promise<void> {
           price: Number(o.price || o.total || 0),
           total: Number(o.total || o.price || 0),
           status: o.status || 'قيد التجهيز',
+          payment_status: o.paymentStatus || 'تم الدفع',
           payment_method: o.paymentMethod || 'بنفت بي',
           delivery_method: o.deliveryMethod || '',
           notes: o.notes || '',
           created_at_ms: o.createdAt || Date.now()
         }));
-        await supabase.from('orders').upsert(mappedOrders);
+        
+        try {
+          await supabase.from('orders').upsert(mappedOrders);
+        } catch {
+          // Fallback if payment_status column does not exist yet in Supabase table
+          const fallbackOrders = mappedOrders.map(({ payment_status, ...rest }: any) => rest);
+          await supabase.from('orders').upsert(fallbackOrders);
+        }
 
         // Delete any orders from Supabase that were deleted
         const inClause = `(${orderIds.map(id => `"${id}"`).join(',')})`;
@@ -262,9 +270,13 @@ export async function syncWithServer(): Promise<StoreData> {
                 price: Number(o.price || o.total || 0),
                 total: Number(o.total || o.price || 0),
                 status: o.status || 'قيد التجهيز',
+                paymentStatus: (o.payment_status || o.paymentStatus || 'تم الدفع') as any,
                 paymentMethod: o.payment_method || o.paymentMethod || 'بنفت بي',
                 deliveryMethod: o.delivery_method || o.deliveryMethod || '',
                 notes: o.notes || '',
+                fabricId: o.fabric_id || o.fabricId || undefined,
+                fabricMeters: o.fabric_meters ? Number(o.fabric_meters) : (o.fabricMeters ? Number(o.fabricMeters) : undefined),
+                fabricName: o.fabric_name || o.fabricName || undefined,
                 createdAt: Number(o.created_at_ms || (o.created_at ? new Date(o.created_at).getTime() : Date.now()))
               }));
             }

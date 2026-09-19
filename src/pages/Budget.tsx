@@ -6,6 +6,7 @@ import { getLocalData, resetDatabase, syncWithServer, EVENT_DATA_UPDATED, persis
 
 export default function Budget() {
   const [revenues, setRevenues] = useState(0);
+  const [pendingRevenues, setPendingRevenues] = useState(0);
   const [expenses, setExpenses] = useState(0);
   const [ordersCount, setOrdersCount] = useState(0);
   const [expensesCount, setExpensesCount] = useState(0);
@@ -16,8 +17,17 @@ export default function Budget() {
 
   const loadData = () => {
     const { orders, expenses: expList, capital: cap } = getLocalData();
-    const totalSales = orders.reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0);
-    setRevenues(totalSales);
+    
+    // Only paid orders are included in revenues & net profit
+    const paidSales = orders
+      .filter((order: any) => order.paymentStatus !== 'قيد الدفع')
+      .reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0);
+    const pendingSales = orders
+      .filter((order: any) => order.paymentStatus === 'قيد الدفع')
+      .reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0);
+      
+    setRevenues(paidSales);
+    setPendingRevenues(pendingSales);
     setOrdersCount(orders.length);
 
     const totalExp = expList.reduce((sum: number, exp: any) => sum + (Number(exp.amount) || 0), 0);
@@ -168,7 +178,7 @@ export default function Budget() {
         <div className="bg-white p-2.5 sm:p-3 rounded-2xl border border-[#C7B895]/30 shadow-xs flex flex-col justify-between overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-[11px] font-bold text-[#1D3A30]/70 uppercase truncate">
-              إجمالي المبيعات
+              المبيعات المحصلة
             </span>
             <Link 
               to="/orders"
@@ -183,11 +193,19 @@ export default function Budget() {
             <h3 className="text-base sm:text-2xl font-black text-[#1D3A30] font-mono">
               +{revenues.toFixed(2)} <span className="text-xs font-medium">د.ب</span>
             </h3>
-            <p className="text-[9px] sm:text-[10px] text-[#1D3A30]/60 mt-0.5 truncate">من {ordersCount} طلب مبيعات</p>
+            <p className="text-[9px] sm:text-[10px] text-[#1D3A30]/60 mt-0.5 truncate">
+              {pendingRevenues > 0 ? (
+                <span className="text-amber-700 font-bold">+{pendingRevenues.toFixed(2)} د.ب معلقة (قيد الدفع)</span>
+              ) : (
+                `من ${ordersCount} طلب مبيعات`
+              )}
+            </p>
           </div>
 
-          <div className="text-[9px] sm:text-[10px] text-[#1D3A30]/70 bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md font-bold truncate">
-            ✓ مدخول مسجل وموثق
+          <div className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-md font-bold truncate ${
+            pendingRevenues > 0 ? 'bg-amber-50 text-amber-900 border border-amber-200/50' : 'bg-emerald-50 text-emerald-800'
+          }`}>
+            {pendingRevenues > 0 ? '✓ محصلة • لا تشمل المبالغ المعلقة' : '✓ مدخول محصل ومعتمد بالأرباح'}
           </div>
         </div>
 

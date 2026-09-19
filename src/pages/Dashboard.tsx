@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [sales, setSales] = useState(0);
   const [expenses, setExpenses] = useState(0);
   const [orders, setOrders] = useState<any[]>([]);
+  const [pendingPaymentSales, setPendingPaymentSales] = useState(0);
   
   // AI & Instagram Modal state - ONLY triggered on demand
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
@@ -29,8 +30,17 @@ export default function Dashboard() {
   const reloadDashboardData = useCallback(() => {
     const local = getLocalData();
     setOrders(local.orders);
-    const totalSales = local.orders.reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0) || 0;
+
+    // Strictly count paid orders in sales and net profits
+    const totalSales = local.orders
+      .filter((order: any) => order.paymentStatus !== 'قيد الدفع')
+      .reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0) || 0;
     setSales(totalSales);
+
+    const pendingSales = local.orders
+      .filter((order: any) => order.paymentStatus === 'قيد الدفع')
+      .reduce((sum: number, order: any) => sum + (order.total || order.price || 0), 0) || 0;
+    setPendingPaymentSales(pendingSales);
 
     const totalExp = local.expenses.reduce((sum: number, exp: any) => sum + (Number(exp.amount) || 0), 0) || 0;
     setExpenses(totalExp);
@@ -47,7 +57,10 @@ export default function Dashboard() {
       const currentExpenses = local.expenses || [];
       const currentFabrics = local.inventory || [];
 
-      const totalSales = currentOrders.reduce((sum: number, o: any) => sum + (o.total || o.price || 0), 0) || 0;
+      // Paid sales only for financial accuracy
+      const totalSales = currentOrders
+        .filter((o: any) => o.paymentStatus !== 'قيد الدفع')
+        .reduce((sum: number, o: any) => sum + (o.total || o.price || 0), 0) || 0;
       const totalExp = currentExpenses.reduce((sum: number, e: any) => sum + (Number(e.amount) || 0), 0) || 0;
       const pendingCount = currentOrders.filter((o: any) => o.status !== 'تم التسليم').length;
       const deliveredCount = currentOrders.length - pendingCount;
@@ -175,14 +188,17 @@ export default function Dashboard() {
 
         {/* 2. المبيعات الكلية وإجمالي المصروفات مقسمة تحته (صف من عمودين) */}
         <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
-          {/* المبيعات الكلية */}
+          {/* المبيعات المحصلة */}
           <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-[#FAF7F0] border border-[#C7B895]/40 flex items-center justify-between px-3 shadow-2xs">
             <div>
               <span className="text-[11px] sm:text-xs font-bold text-[#1D3A30]/80 block">
-                المبيعات الكلية
+                المبيعات المحصلة
               </span>
               <span className="text-[9px] sm:text-[10px] text-[#1D3A30]/65 block font-medium">
-                {orders.length} طلب مسجل
+                {orders.filter((o: any) => o.paymentStatus !== 'قيد الدفع').length} مدفوع
+                {pendingPaymentSales > 0 && (
+                  <span className="text-amber-700 font-bold mr-1">• {pendingPaymentSales.toFixed(1)} قيد الدفع</span>
+                )}
               </span>
             </div>
             <div className="text-left font-mono">

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
     price NUMERIC DEFAULT 0,
     total NUMERIC DEFAULT 0,
     status TEXT DEFAULT 'قيد التجهيز',
+    payment_status TEXT DEFAULT 'تم الدفع',
     payment_method TEXT DEFAULT 'بنفت بي',
     delivery_method TEXT DEFAULT '',
     notes TEXT DEFAULT '',

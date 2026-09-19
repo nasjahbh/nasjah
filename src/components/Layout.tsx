@@ -61,7 +61,9 @@ export default function Layout() {
       const { orders, inventory } = getCloudData();
       const pending = orders.filter((o: any) => o.status === 'قيد التجهيز' || !o.status).length;
       setPendingOrdersCount(pending);
-      const sales = orders.reduce((sum: number, o: any) => sum + (o.total || o.price || 0), 0);
+      const sales = orders
+        .filter((o: any) => o.paymentStatus !== 'قيد الدفع')
+        .reduce((sum: number, o: any) => sum + (o.total || o.price || 0), 0);
       setTotalSales(sales);
 
       const lowStock = inventory.filter((f: any) => (Number(f.quantity) || 0) <= 2).length;

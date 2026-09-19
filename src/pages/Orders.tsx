@@ -8,7 +8,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import { Fabric, Order, OrderStatus, PaymentMethod } from '../types';
+import { Fabric, Order, OrderStatus, PaymentMethod, PaymentStatus, isOrderPaid } from '../types';
 import { formatDateTime, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
 import NasjahLogo from '../components/NasjahLogo';
 import WhatsAppIcon from '../components/WhatsAppIcon';
@@ -43,6 +43,7 @@ export default function Orders() {
   // Search and filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'تم الدفع' | 'قيد الدفع'>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [showDateFilter, setShowDateFilter] = useState<boolean>(false);
@@ -57,6 +58,7 @@ export default function Orders() {
     details: '',
     price: '',
     status: 'قيد التجهيز' as OrderStatus,
+    paymentStatus: 'تم الدفع' as PaymentStatus,
     paymentMethod: 'بنفت بي' as PaymentMethod,
     datetimeStr: toDatetimeLocal(),
     notes: ''
@@ -101,6 +103,7 @@ export default function Orders() {
       details: '',
       price: '',
       status: 'قيد التجهيز',
+      paymentStatus: 'تم الدفع',
       paymentMethod: 'بنفت بي',
       datetimeStr: toDatetimeLocal(),
       notes: ''
@@ -132,6 +135,7 @@ export default function Orders() {
       details: order.details,
       price: String(order.price),
       status: order.status || 'قيد التجهيز',
+      paymentStatus: (order.paymentStatus || 'تم الدفع') as PaymentStatus,
       paymentMethod: (order.paymentMethod as PaymentMethod) || 'بنفت بي',
       datetimeStr: toDatetimeLocal(order.createdAt),
       notes: order.notes || ''
@@ -347,6 +351,7 @@ export default function Orders() {
             price: priceNum,
             total: priceNum,
             status: orderForm.status,
+            paymentStatus: orderForm.paymentStatus || 'تم الدفع',
             paymentMethod: orderForm.paymentMethod,
             notes: orderForm.notes.trim(),
             createdAt: createdAtMs,
@@ -367,6 +372,7 @@ export default function Orders() {
         price: priceNum,
         total: priceNum,
         status: orderForm.status,
+        paymentStatus: orderForm.paymentStatus || 'تم الدفع',
         paymentMethod: orderForm.paymentMethod,
         notes: orderForm.notes.trim(),
         createdAt: createdAtMs,
@@ -407,11 +413,24 @@ export default function Orders() {
     setOrders(updated);
   };
 
-  const handleToggleStatus = (id: string) => {
+  const handleToggleStatus = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     const updated = orders.map(o => {
       if (o.id === id) {
         const nextStatus: OrderStatus = o.status === 'تم التسليم' ? 'قيد التجهيز' : 'تم التسليم';
         return { ...o, status: nextStatus };
+      }
+      return o;
+    });
+    saveOrders(updated);
+  };
+
+  const handleTogglePaymentStatus = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const updated = orders.map(o => {
+      if (o.id === id) {
+        const nextPayment: PaymentStatus = o.paymentStatus === 'قيد الدفع' ? 'تم الدفع' : 'قيد الدفع';
+        return { ...o, paymentStatus: nextPayment };
       }
       return o;
     });
@@ -435,11 +454,12 @@ export default function Orders() {
     doc.setTextColor(20);
     doc.text(`العميل: ${order.customerName}`, 20, 55);
     doc.text(`الهاتف: ${order.phone || '-'}`, 20, 62);
-    doc.text(`الحالة: ${order.status || 'قيد التجهيز'}`, 20, 69);
-    doc.text(`طريقة الدفع: ${order.paymentMethod || 'بنفت بي'}`, 20, 76);
+    doc.text(`حالة الطلب: ${order.status || 'قيد التجهيز'}`, 20, 69);
+    doc.text(`حالة الدفع: ${order.paymentStatus || 'تم الدفع'}`, 20, 76);
+    doc.text(`طريقة الدفع: ${order.paymentMethod || 'بنفت بي'}`, 20, 83);
     
     (doc as any).autoTable({
-      startY: 84,
+      startY: 91,
       headStyles: { fillColor: [29, 58, 48], textColor: [232, 213, 168] },
       head: [['بيان القماش / تفاصيل الطلب', 'المبلغ (د.ب)']],
       body: [
@@ -461,7 +481,7 @@ export default function Orders() {
     doc.save(`فاتورة_${order.customerName}_${order.id}.pdf`);
   };
 
-  // Filter logic with custom date range
+  // Filter logic with custom date range and payment status
   const filteredOrders = orders.filter(o => {
     const q = searchQuery.toLowerCase();
     const matchesSearch = (
@@ -477,6 +497,12 @@ export default function Orders() {
       return false;
     }
 
+    if (paymentStatusFilter !== 'all') {
+      const isPaid = (o.paymentStatus !== 'قيد الدفع');
+      if (paymentStatusFilter === 'تم الدفع' && !isPaid) return false;
+      if (paymentStatusFilter === 'قيد الدفع' && isPaid) return false;
+    }
+
     if (startDate) {
       const startTimestamp = new Date(startDate).setHours(0, 0, 0, 0);
       if (o.createdAt < startTimestamp) return false;
@@ -490,7 +516,14 @@ export default function Orders() {
     return true;
   });
 
-  const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.total || o.price) || 0), 0);
+  const paidRevenue = orders
+    .filter(o => o.paymentStatus !== 'قيد الدفع')
+    .reduce((sum, o) => sum + (Number(o.total || o.price) || 0), 0);
+  const pendingPaymentRevenue = orders
+    .filter(o => o.paymentStatus === 'قيد الدفع')
+    .reduce((sum, o) => sum + (Number(o.total || o.price) || 0), 0);
+  const pendingPaymentCount = orders.filter(o => o.paymentStatus === 'قيد الدفع').length;
+  const paidOrdersCount = orders.length - pendingPaymentCount;
   const pendingCount = orders.filter(o => o.status === 'قيد التجهيز' || !o.status).length;
   const isDateFiltered = Boolean(startDate || endDate);
 
@@ -501,7 +534,12 @@ export default function Orders() {
         <div>
           <h1 className="text-base font-extrabold text-[#1D3A30]">سجل الطلبات والمبيعات</h1>
           <p className="text-[11px] text-[#1D3A30]/70 font-medium">
-            {orders.length} طلب مسجل • {totalRevenue.toFixed(2)} د.ب
+            {orders.length} طلب • {paidRevenue.toFixed(2)} د.ب محصلة
+            {pendingPaymentCount > 0 && (
+              <span className="text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded font-bold mr-1.5 border border-amber-200/60">
+                +{pendingPaymentRevenue.toFixed(2)} د.ب معلقة ({pendingPaymentCount} قيد الدفع)
+              </span>
+            )}
           </p>
         </div>
         <button
@@ -538,17 +576,47 @@ export default function Orders() {
         {/* Horizontal Scrollable Filter Chips (no scrollbar) */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
           <button
-            onClick={() => setStatusFilter('all')}
+            onClick={() => {
+              setStatusFilter('all');
+              setPaymentStatusFilter('all');
+            }}
             className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${
-              statusFilter === 'all'
+              statusFilter === 'all' && paymentStatusFilter === 'all'
                 ? 'bg-[#1D3A30] text-[#E8D5A8] shadow-xs'
                 : 'bg-white text-[#1D3A30]/80 border border-[#C7B895]/30 hover:bg-[#FAF7F0]'
             }`}
           >
             الكل ({orders.length})
           </button>
+
+          {/* Payment status filter: Paid */}
           <button
-            onClick={() => setStatusFilter('قيد التجهيز')}
+            onClick={() => setPaymentStatusFilter(paymentStatusFilter === 'تم الدفع' ? 'all' : 'تم الدفع')}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition flex items-center gap-1 cursor-pointer ${
+              paymentStatusFilter === 'تم الدفع'
+                ? 'bg-emerald-800 text-white shadow-xs'
+                : 'bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50'
+            }`}
+          >
+            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+            <span>تم الدفع ({paidOrdersCount})</span>
+          </button>
+
+          {/* Payment status filter: Pending payment */}
+          <button
+            onClick={() => setPaymentStatusFilter(paymentStatusFilter === 'قيد الدفع' ? 'all' : 'قيد الدفع')}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition flex items-center gap-1 cursor-pointer ${
+              paymentStatusFilter === 'قيد الدفع'
+                ? 'bg-amber-800 text-white shadow-xs'
+                : 'bg-white text-amber-800 border border-amber-300 hover:bg-amber-50'
+            }`}
+          >
+            <Clock className="w-3 h-3 text-amber-600" />
+            <span>قيد الدفع ({pendingPaymentCount})</span>
+          </button>
+
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'قيد التجهيز' ? 'all' : 'قيد التجهيز')}
             className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition flex items-center gap-1 cursor-pointer ${
               statusFilter === 'قيد التجهيز'
                 ? 'bg-[#A99872] text-[#FAF7F0] shadow-xs'
@@ -557,8 +625,9 @@ export default function Orders() {
           >
             قيد التجهيز ({pendingCount})
           </button>
+
           <button
-            onClick={() => setStatusFilter('تم التسليم')}
+            onClick={() => setStatusFilter(statusFilter === 'تم التسليم' ? 'all' : 'تم التسليم')}
             className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${
               statusFilter === 'تم التسليم'
                 ? 'bg-[#1D3A30] text-[#E8D5A8] shadow-xs'
@@ -701,22 +770,22 @@ export default function Orders() {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white rounded-2xl p-3.5 border border-[#C7B895]/30 shadow-xs hover:border-[#C7B895] transition"
               >
-                {/* Card Top: ID, Status Toggle, Price */}
+                {/* Card Top: ID, Status Toggle, Payment Status Toggle, Price */}
                 <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#C7B895]/20">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[10px] font-mono bg-[#FAF7F0] text-[#1D3A30] font-bold px-2 py-0.5 rounded-md border border-[#C7B895]/25">
                       #{order.id}
                     </span>
                     
-                    {/* Status button (1-tap to switch status) */}
+                    {/* Status button (1-tap to switch delivery status) */}
                     <button
-                      onClick={() => handleToggleStatus(order.id)}
-                      className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 transition active:scale-95 border ${
+                      onClick={(e) => handleToggleStatus(order.id, e)}
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 transition active:scale-95 border cursor-pointer ${
                         order.status === 'تم التسليم'
                           ? 'bg-[#1D3A30] text-[#E8D5A8] border-[#C7B895]/40'
                           : 'bg-[#FAF7F0] text-[#A99872] border-[#C7B895]'
                       }`}
-                      title="اضغط لتغيير الحالة"
+                      title="اضغط لتغيير حالة الطلب (قيد التجهيز / تم التسليم)"
                     >
                       {order.status === 'تم التسليم' ? (
                         <CheckCircle2 className="w-3 h-3 text-[#E8D5A8]" />
@@ -725,13 +794,45 @@ export default function Orders() {
                       )}
                       <span>{order.status || 'قيد التجهيز'}</span>
                     </button>
+
+                    {/* Payment Status button (1-tap to toggle paid vs pending) */}
+                    <button
+                      onClick={(e) => handleTogglePaymentStatus(order.id, e)}
+                      className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 transition active:scale-95 border cursor-pointer ${
+                        order.paymentStatus === 'قيد الدفع'
+                          ? 'bg-amber-100 text-amber-950 border-amber-300 hover:bg-amber-200 shadow-2xs'
+                          : 'bg-emerald-100 text-emerald-950 border-emerald-300 hover:bg-emerald-200 shadow-2xs'
+                      }`}
+                      title={order.paymentStatus === 'قيد الدفع' ? 'قيد الدفع: اضغط للتحويل لتم الدفع وإدراجه في الأرباح فوراً' : 'تم الدفع: محسوب في الأرباح (اضغط للتحويل لقيد الدفع)'}
+                    >
+                      {order.paymentStatus === 'قيد الدفع' ? (
+                        <>
+                          <Clock className="w-3 h-3 text-amber-700 animate-pulse" />
+                          <span>قيد الدفع</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-700" />
+                          <span>تم الدفع</span>
+                        </>
+                      )}
+                    </button>
                   </div>
 
-                  <div className="text-left">
-                    <span className="text-sm font-black text-[#1D3A30] font-mono">
+                  <div className="text-left flex-shrink-0">
+                    <span className="text-sm font-black text-[#1D3A30] font-mono block leading-tight">
                       {Number(order.price || order.total).toFixed(2)}{' '}
                       <span className="text-[10px] font-bold text-[#A99872]">د.ب</span>
                     </span>
+                    {order.paymentStatus === 'قيد الدفع' ? (
+                      <span className="text-[9px] font-bold text-amber-700 block whitespace-nowrap">
+                        معلق للأرباح
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-bold text-emerald-700 block whitespace-nowrap">
+                        محصل بالأرباح
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1210,6 +1311,48 @@ export default function Orders() {
                   </div>
                 </div>
 
+                {/* Payment Status Segmented Control */}
+                <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#C7B895]/40 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-extrabold text-[#1D3A30]">
+                      حالة سداد المبلغ
+                    </label>
+                    <span className="text-[10px] text-[#1D3A30]/65 font-bold">
+                      {orderForm.paymentStatus === 'تم الدفع' ? '✓ يُحتسب فوراً في الأرباح' : '⚠ معلّق - لا يدخل في الأرباح'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOrderForm({ ...orderForm, paymentStatus: 'تم الدفع' })}
+                      className={cn(
+                        "p-2 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-98",
+                        orderForm.paymentStatus === 'تم الدفع'
+                          ? "bg-emerald-800 text-white border-emerald-800 shadow-xs ring-1 ring-emerald-600"
+                          : "bg-white text-emerald-900 border-emerald-300 hover:bg-emerald-50"
+                      )}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                      <span>تم الدفع (مقبوض)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setOrderForm({ ...orderForm, paymentStatus: 'قيد الدفع' })}
+                      className={cn(
+                        "p-2 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-98",
+                        orderForm.paymentStatus === 'قيد الدفع'
+                          ? "bg-amber-800 text-white border-amber-800 shadow-xs ring-1 ring-amber-600"
+                          : "bg-white text-amber-900 border-amber-300 hover:bg-amber-50"
+                      )}
+                    >
+                      <Clock className="w-3.5 h-3.5 text-amber-300" />
+                      <span>قيد الدفع (معلّق)</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Date & Time Picker */}
                 <div>
                   <label className="block text-[11px] font-bold text-[#1D3A30] mb-1">
@@ -1324,9 +1467,24 @@ export default function Orders() {
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] text-[#1D3A30]/70">
+                <div className="flex items-center justify-between text-[10px] text-[#1D3A30]/80">
                   <span>طريقة الدفع: {selectedInvoice.paymentMethod || 'بنفت بي'}</span>
-                  <span>الحالة: {selectedInvoice.status || 'قيد التجهيز'}</span>
+                  <span>حالة الطلب: {selectedInvoice.status || 'قيد التجهيز'}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] pt-1">
+                  <span className="text-[#1D3A30]/70 font-medium">حالة السداد والأرباح:</span>
+                  {selectedInvoice.paymentStatus === 'قيد الدفع' ? (
+                    <span className="text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
+                      <span>قيد الدفع (معلّق)</span>
+                    </span>
+                  ) : (
+                    <span className="text-emerald-900 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
+                      <Check className="w-3 h-3 text-emerald-600" />
+                      <span>تم الدفع (محصل)</span>
+                    </span>
+                  )}
                 </div>
               </div>
 
