@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
   X, 
-  Scissors, 
+  Scissors,
   Instagram, 
   MoreVertical,
   ChevronDown,
@@ -522,37 +522,12 @@ export default function Store() {
             <div className="w-8 h-8 border-2 border-[#1D3A30] border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-xs font-bold text-[#1D3A30]/60">جارِ تحميل الأقمشة...</p>
           </div>
-        ) : totalVisibleFabrics === 0 ? (
-          <div className="bg-white rounded-3xl p-12 text-center border border-[#C7B895]/30 space-y-3 my-8">
-            <Scissors className="w-10 h-10 text-[#C7B895] mx-auto opacity-70" />
-            <h3 className="text-sm font-bold text-[#1D3A30]">لا توجد أقمشة مطابقة للبحث</h3>
-            <p className="text-xs text-[#1D3A30]/60">
-              يمكنك التواصل معنا عبر واتساب للاستفسار عن أي نوع قماش ترغب به.
-            </p>
-            <div className="pt-2 flex justify-center gap-2">
-              <button
-                onClick={() => { setSelectedSeason('all'); setSearchQuery(''); }}
-                className="px-4 py-2 bg-[#FAF7F0] hover:bg-[#F2ECE0] text-[#1D3A30] rounded-xl text-xs font-bold border border-[#C7B895]/50 transition cursor-pointer"
-              >
-                عرض كافة الأقمشة
-              </button>
-              <a
-                href={getWhatsAppLink()}
-                target="_blank"
-                rel="noreferrer"
-                className="px-4 py-2 bg-[#1D3A30] text-[#E8D5A8] rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
-              >
-                <WhatsAppIcon className="w-3.5 h-3.5" />
-                <span>محادثة واتساب ({rawNumber})</span>
-              </a>
-            </div>
-          </div>
         ) : (
           /* SECTIONS DISPLAYED IN THE SEQUENCE CONFIGURED BY ADMIN */
           effectiveSeasonsOrder.map((seasonKey) => {
             const fabrics = groupedFabrics[seasonKey] || [];
-            if (fabrics.length === 0 && selectedSeason === 'all' && searchQuery) {
-              return null; // Skip empty section during search
+            if (fabrics.length === 0) {
+              return null; // Do not show empty section or placeholders
             }
 
             const meta = SEASON_META[seasonKey];
@@ -577,15 +552,8 @@ export default function Store() {
                 </div>
 
                 {/* Section Fabric Cards Grid */}
-                {fabrics.length === 0 ? (
-                  <div className="bg-white/70 rounded-2xl p-6 text-center border border-dashed border-[#C7B895]/40">
-                    <p className="text-xs text-[#1D3A30]/50 font-medium">
-                      لا توجد أقمشة مدرجة حالياً في هذا القسم.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {fabrics.map((fabric) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {fabrics.map((fabric) => (
                       <div
                         key={fabric.id}
                         className="bg-white rounded-3xl overflow-hidden border border-[#C7B895]/30 shadow-xs hover:shadow-md transition duration-200 flex flex-col group"
@@ -601,7 +569,7 @@ export default function Store() {
                             />
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center text-[#1D3A30]/40 p-4">
-                              <Scissors className="w-8 h-8 text-[#C7B895] mb-2" />
+                              <Layers className="w-8 h-8 text-[#C7B895] mb-2 opacity-60" />
                               <span className="text-[11px] font-bold text-[#1D3A30]/60">قماش رجالي</span>
                             </div>
                           )}
@@ -675,7 +643,6 @@ export default function Store() {
                       </div>
                     ))}
                   </div>
-                )}
 
               </section>
             );

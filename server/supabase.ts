@@ -118,6 +118,7 @@ export async function getSupabaseFabrics(): Promise<any[]> {
       category: item.category || "أقمشة رجالية",
       imageUrl: item.image_url || item.imageUrl || item.image || "",
       barcode: item.barcode || "",
+      season: item.season || item.season_type || "",
     }));
   } catch (err) {
     console.error("Error fetching Supabase fabrics:", err);
