@@ -17,6 +17,7 @@ import {
 import NasjahLogo from '../components/NasjahLogo';
 import WhatsAppIcon from '../components/WhatsAppIcon';
 import { CRITICAL_FABRIC_THRESHOLD, StoreSettings, DEFAULT_STORE_SETTINGS } from '../types';
+import { supabase } from '../lib/supabase';
 
 export interface PublicFabric {
   id: string;
@@ -79,45 +80,86 @@ export default function Store() {
   useEffect(() => {
     async function fetchCatalogAndSettings() {
       try {
-        const res = await fetch('/api/public-catalog');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.catalog && Array.isArray(data.catalog)) {
-            setCatalog(data.catalog);
-          }
-          if (data.settings) {
-            setStoreSettings({
-              ...DEFAULT_STORE_SETTINGS,
-              ...data.settings,
-              seasonsOrder: data.settings.seasonsOrder && data.settings.seasonsOrder.length > 0
-                ? data.settings.seasonsOrder
-                : ['winter', 'summer', 'spring']
-            });
-            if (data.settings.defaultSeason && ['all', 'winter', 'summer', 'spring'].includes(data.settings.defaultSeason)) {
-              setSelectedSeason(data.settings.defaultSeason as SeasonFilter);
-            }
-          }
-        } else {
-          // Fallback to local store data
-          const fallbackRes = await fetch('/api/store-data');
-          if (fallbackRes.ok) {
-            const data = await fallbackRes.json();
-            if (data.inventory && Array.isArray(data.inventory)) {
-              const mapped: PublicFabric[] = data.inventory.map((item: any) => ({
-                id: String(item.id),
-                name: item.name || '',
-                price: Number(item.price || 0),
-                quantity: Number(item.quantity || 0),
-                isAvailable: Number(item.quantity || 0) >= CRITICAL_FABRIC_THRESHOLD,
-                isLowStock: Number(item.quantity || 0) < CRITICAL_FABRIC_THRESHOLD && Number(item.quantity || 0) > 0,
-                isOutOfStock: Number(item.quantity || 0) <= 0,
-                category: item.category || 'أقمشة رجالية فاخرة',
-                imageUrl: item.imageUrl || item.image_url || item.image || '',
-                season: item.season || ''
-              }));
+        let fabricsFound = false;
+
+        // 1. Fetch directly from Supabase Cloud (works seamlessly on Vercel and all frontends)
+        if (supabase) {
+          try {
+            const { data: sbData, error: sbError } = await supabase
+              .from('inventory')
+              .select('*');
+
+            if (!sbError && sbData && sbData.length > 0) {
+              const mapped: PublicFabric[] = sbData.map((item: any) => {
+                const qty = Number(item.quantity || 0);
+                return {
+                  id: String(item.id),
+                  name: item.name || '',
+                  price: Number(item.price || 0),
+                  quantity: qty,
+                  isAvailable: qty >= CRITICAL_FABRIC_THRESHOLD,
+                  isLowStock: qty < CRITICAL_FABRIC_THRESHOLD && qty > 0,
+                  isOutOfStock: qty <= 0,
+                  category: item.category || 'أقمشة رجالية فاخرة',
+                  imageUrl: item.image_url || item.imageUrl || item.image || '',
+                  season: item.season || item.season_type || ''
+                };
+              });
               setCatalog(mapped);
+              fabricsFound = true;
+            }
+          } catch (e) {
+            console.warn('Direct Supabase fetch note:', e);
+          }
+        }
+
+        // 2. Query /api/public-catalog (for full-stack dev / local server / cloud run)
+        try {
+          const res = await fetch('/api/public-catalog');
+          if (res.ok) {
+            const data = await res.json();
+            if (!fabricsFound && data.catalog && Array.isArray(data.catalog) && data.catalog.length > 0) {
+              setCatalog(data.catalog);
+              fabricsFound = true;
+            }
+            if (data.settings) {
+              setStoreSettings({
+                ...DEFAULT_STORE_SETTINGS,
+                ...data.settings,
+                seasonsOrder: data.settings.seasonsOrder && data.settings.seasonsOrder.length > 0
+                  ? data.settings.seasonsOrder
+                  : ['winter', 'summer', 'spring']
+              });
+              if (data.settings.defaultSeason && ['all', 'winter', 'summer', 'spring'].includes(data.settings.defaultSeason)) {
+                setSelectedSeason(data.settings.defaultSeason as SeasonFilter);
+              }
             }
           }
+        } catch {}
+
+        // 3. Fallback to /api/store-data if still not populated
+        if (!fabricsFound) {
+          try {
+            const fallbackRes = await fetch('/api/store-data');
+            if (fallbackRes.ok) {
+              const data = await fallbackRes.json();
+              if (data.inventory && Array.isArray(data.inventory) && data.inventory.length > 0) {
+                const mapped: PublicFabric[] = data.inventory.map((item: any) => ({
+                  id: String(item.id),
+                  name: item.name || '',
+                  price: Number(item.price || 0),
+                  quantity: Number(item.quantity || 0),
+                  isAvailable: Number(item.quantity || 0) >= CRITICAL_FABRIC_THRESHOLD,
+                  isLowStock: Number(item.quantity || 0) < CRITICAL_FABRIC_THRESHOLD && Number(item.quantity || 0) > 0,
+                  isOutOfStock: Number(item.quantity || 0) <= 0,
+                  category: item.category || 'أقمشة رجالية فاخرة',
+                  imageUrl: item.imageUrl || item.image_url || item.image || '',
+                  season: item.season || ''
+                }));
+                setCatalog(mapped);
+              }
+            }
+          } catch {}
         }
       } catch (err) {
         console.error('Failed to load store data', err);
